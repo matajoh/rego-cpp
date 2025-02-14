@@ -1,3 +1,4 @@
+#include "fast.hh"
 #include "rego.hh"
 #include "trieste/json.h"
 #include "trieste/wf.h"
@@ -21,6 +22,7 @@ namespace rego
     m_debug_path("."),
     m_builtins(BuiltInsDef::create()),
     m_unify(unify(m_builtins)),
+    m_fast(fast()),
     m_json(json::reader()),
     m_from_json(from_json()),
     m_to_input(to_input()),
@@ -217,12 +219,11 @@ namespace rego
     return nullptr;
   }
 
-  Node Interpreter::raw_query(const std::string& query_expr)
+  Node Interpreter::set_query(const std::string& query)
   {
-    logging::Info() << "Query: " << query_expr;
-    auto query_src = SourceDef::synthetic(query_expr);
+    logging::Info() << "Setting query: " << query;
     auto result =
-      m_reader.synthetic(query_expr).debug_path(m_debug_path / "query").read();
+      m_reader.synthetic(query).debug_path(m_debug_path / "query").read();
     if (!result.ok)
     {
       logging::Error err;
@@ -231,7 +232,18 @@ namespace rego
     }
 
     merge(result.ast->front());
+    return nullptr;
+  }
 
+  Node Interpreter::raw_query(const std::string& query_expr)
+  {
+    set_query(query_expr);
+    return raw_query();
+  }
+
+  Node Interpreter::raw_query()
+  {
+    logging::Info() << "Query";
     {
       WFContext context(wf_unify_input);
       Node input = m_ast / Rego / Input;
@@ -243,7 +255,7 @@ namespace rego
 
     m_builtins->clear();
 
-    result = m_ast >> m_unify;
+    auto result = m_ast >> m_unify;
     if (!result.ok)
     {
       logging::Error err;
@@ -252,6 +264,34 @@ namespace rego
     }
 
     return result.ast->front();
+  }
+
+  Node Interpreter::fast_query()
+  {
+    logging::Info() << "Fast Query";
+    {
+      WFContext context(wf_fast_input);
+      Node input = m_ast / Rego / Input;
+      if (input->empty())
+      {
+        input << Undefined;
+      }
+    }
+
+    auto result = m_ast >> m_fast;
+    if (!result.ok)
+    {
+      logging::Error err;
+      result.print_errors(err);
+      return ErrorSeq << result.errors;
+    }
+
+    return result.ast->front();
+  }
+
+  std::string Interpreter::query()
+  {
+    return output_to_string(raw_query());
   }
 
   std::string Interpreter::query(const std::string& query_expr)

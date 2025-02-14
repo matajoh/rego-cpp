@@ -184,6 +184,44 @@ namespace rego
   // clang-format on
 
   // clang-format off
+    inline const auto wf_fast =
+    (Top <<= Query | Module)
+    | (Module <<= Package * Version * Policy)
+    | (Package <<= Ref)
+    | (Policy <<= Rule++)
+    | (Rule <<= (Default >>= True | False) * RuleHead * RuleBodySeq)
+    | (RuleHead <<= RuleRef * RuleHeadComp)
+    | (RuleRef <<= Var)
+    | (RuleHeadComp <<= Expr)
+    | (RuleBodySeq <<= Query)
+    | (Query <<= Literal++)
+    | (Literal <<= Expr | NotExpr)
+    | (NotExpr <<= Expr)
+    | (Expr <<= (Term | ExprCall | ExprInfix | ExprParens | UnaryExpr))
+    | (ExprCall <<= Ref * ExprSeq)
+    | (ExprInfix <<= Expr * InfixOperator * Expr)
+    | (ExprParens <<= Expr)
+    | (UnaryExpr <<= Expr)
+    | (Term <<= Ref | Var | Scalar | Array | Object | Set)
+    | (InfixOperator <<= AssignOperator | BoolOperator | ArithOperator | BinOperator)
+    | (BoolOperator <<= Equals | NotEquals | LessThan | GreaterThan | LessThanOrEquals | GreaterThanOrEquals)
+    | (ArithOperator <<= Add | Subtract | Multiply | Divide | Modulo)
+    | (BinOperator <<= And | Or)
+    | (AssignOperator <<= Assign)
+    | (Ref <<= RefHead * RefArgSeq)
+    | (RefHead <<= Var)
+    | (RefArgSeq <<= RefArgDot++)
+    | (RefArgDot <<= Var)
+    | (Scalar <<= String | Int | Float | True | False | Null)
+    | (String <<= JSONString | RawString)
+    | (Array <<= Expr++)
+    | (Object <<= ObjectItem++)
+    | (ObjectItem <<= (Key >>= Expr) * (Val >>= Expr))
+    | (Set <<= Expr++)
+    ;
+  // clang-format on
+
+  // clang-format off
   inline const auto wf_result =
     (Top <<= Results | Undefined)
     | (Results <<= Result++[1])
@@ -959,6 +997,18 @@ namespace rego
      */
     Node set_input(const Node& node);
 
+    Node set_query(const std::string& query);
+
+    /**
+     * Executes the documents against the interpreter.
+     *
+     * This method calls Interpreter::raw_query and then converts it into a
+     * human-readable string.
+     *
+     * @return The result of the query.
+     */
+     std::string query();
+
     /**
      * Executes a query against the interpreter.
      *
@@ -981,6 +1031,10 @@ namespace rego
      * @return The result of the query.
      */
     Node raw_query(const std::string& query_expr);
+
+    Node raw_query();
+
+    Node fast_query();
 
     /**
      * The path to the debug directory.
@@ -1018,6 +1072,8 @@ namespace rego
      */
     BuiltInsDef& builtins() const;
 
+    std::string output_to_string(const Node& output) const;
+
   private:
     friend const char* ::regoGetError(regoInterpreter* rego);
     friend void setError(regoInterpreter* rego, const std::string& error);
@@ -1025,12 +1081,12 @@ namespace rego
       regoInterpreter* rego, const char* query_expr);
 
     void merge(const Node& ast);
-    std::string output_to_string(const Node& output) const;
     Reader m_reader;
     Node m_ast;
     std::filesystem::path m_debug_path;
     BuiltIns m_builtins;
     Rewriter m_unify;
+    Rewriter m_fast;
     Reader m_json;
     Rewriter m_from_json;
     Rewriter m_to_input;
@@ -1068,4 +1124,9 @@ namespace rego
    * Rewrites a Rego binding term to a YAML AST.
    */
   Rewriter to_yaml();
+
+  /**
+   * Executes a query and policy which comply with a subset of the Rego language designed for performance.
+   */
+  Rewriter fast();
 }
