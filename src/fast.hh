@@ -5,7 +5,6 @@
 
 namespace rego
 {
-  inline const auto FastRego = TokenDef("fast-rego", flag::symtab);
   inline const auto FastData = TokenDef("fast-rego-data", flag::lookup);
   inline const auto FastModule = TokenDef("fast-rego-module", flag::lookup);
   inline const auto FastRule = TokenDef("fast-rego-rule", flag::lookup);
@@ -17,8 +16,9 @@ namespace rego
   // clang-format off
   inline const auto wf_fast_input =
     rego::wf
-    | (Top <<= FastRego)
-    | (FastRego <<= Query * Input * Module)
+    | (Top <<= Rego)
+    | (Rego <<= Query * Input * DataSeq * ModuleSeq)
+    | (ModuleSeq <<= Module)
     | (Input <<= DataTerm | Undefined)
     ;
   // clang-format on
@@ -26,7 +26,7 @@ namespace rego
   // clang-format off
   inline const auto wf_fast_prep =
     wf_fast_input
-    | (FastRego <<= Query * FastData * Input)
+    | (Rego <<= Query * FastData * Input)
     | (FastData <<= Key * (Val >>= FastModule))[Key]
     | (Query <<= (FastLocal | Expr | NotExpr)++)
     | (Input <<= Key * (Val >>= DataTerm | Undefined))[Key]
@@ -42,7 +42,7 @@ namespace rego
   // clang-format off
   inline const auto wf_fast_unify =
     wf_fast_prep
-    | (FastRego <<= Query)
+    | (Rego <<= Query)
     | (Query <<= Result++)
     | (Result <<= Terms * Bindings)
     | (Terms <<= Term++)
