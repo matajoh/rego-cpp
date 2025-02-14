@@ -19,6 +19,7 @@ json.cc
 yaml.cc
 reader.cc
 unify.cc
+fast.cc
 unify/strings.cc
 unify/merge_data.cc
 unify/varrefheads.cc

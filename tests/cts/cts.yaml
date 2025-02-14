@@ -45,6 +45,6 @@ cases:
         sub: Test
         svn: 0
     profile: 0
-  query: data.policy.allow
+  query: x=data.policy.allow
   want_result: 
   - x: true

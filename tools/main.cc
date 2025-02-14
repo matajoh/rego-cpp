@@ -5,8 +5,9 @@
 int main(int argc, char** argv)
 {
   std::cout << "rego " << REGOCPP_VERSION << " (" << REGOCPP_BUILD_NAME << ", "
-            << REGOCPP_BUILD_DATE << ")" << "[" << REGOCPP_BUILD_TOOLCHAIN
-            << "] on " << REGOCPP_PLATFORM << std::endl;
+            << REGOCPP_BUILD_DATE << ")"
+            << "[" << REGOCPP_BUILD_TOOLCHAIN << "] on " << REGOCPP_PLATFORM
+            << std::endl;
   CLI::App app;
 
   app.set_help_all_flag("--help-all", "Expand all help");
@@ -41,6 +42,9 @@ int main(int argc, char** argv)
   app.add_flag(
     "-1,--v1-compatible", v1_compatible, "Use Rego v1 compatibility mode");
 
+  bool fast{false};
+  app.add_flag("-f,--fast", fast, "Use fast query mode");
+
   try
   {
     app.parse(argc, argv);
@@ -50,7 +54,7 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  auto interpreter = rego::Interpreter(v1_compatible);
+  auto interpreter = rego::Interpreter(v1_compatible || fast);
   interpreter.wf_check_enabled(wf_checks);
   if (!output.empty())
   {
@@ -125,7 +129,17 @@ int main(int argc, char** argv)
 
   try
   {
-    trieste::logging::Output() << interpreter.query(query_expr) << std::endl;
+    if (fast)
+    {
+      interpreter.set_query(query_expr);
+      auto result = interpreter.fast_query();
+      trieste::logging::Output()
+        << interpreter.output_to_string(result) << std::endl;
+    }
+    else
+    {
+      trieste::logging::Output() << interpreter.query(query_expr) << std::endl;
+    }
     return 0;
   }
   catch (const std::exception& e)
