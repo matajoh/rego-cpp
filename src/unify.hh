@@ -5,10 +5,7 @@
 
 namespace rego
 {
-  inline const auto Rego = TokenDef("rego", flag::symtab);
   inline const auto Data = TokenDef("rego-data", flag::lookup);
-  inline const auto DataSeq = TokenDef("rego-dataseq");
-  inline const auto ModuleSeq = TokenDef("rego-moduleseq");
   inline const auto Submodule =
     TokenDef("rego-submodule", flag::lookdown | flag::lookup);
 

@@ -153,7 +153,10 @@ namespace rego
 
   Parse parser();
 
+  inline const auto Rego = TokenDef("rego", flag::symtab);
   inline const auto Input = TokenDef("rego-input", flag::lookup);
+  inline const auto DataSeq = TokenDef("rego-dataseq");
+  inline const auto ModuleSeq = TokenDef("rego-moduleseq");
   inline const auto DataModule = TokenDef("rego-datamodule", flag::lookup);
   inline const auto DataTerm = TokenDef("rego-dataterm");
   inline const auto DataObject = TokenDef("rego-dataobject");
