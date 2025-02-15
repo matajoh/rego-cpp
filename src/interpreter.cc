@@ -1,4 +1,5 @@
 #include "fast.hh"
+#include "internal.hh"
 #include "rego.hh"
 #include "trieste/json.h"
 #include "trieste/wf.h"
@@ -256,6 +257,9 @@ namespace rego
     m_builtins->clear();
 
     auto result = m_ast >> m_unify;
+
+    PRINT_ACTION_METRICS();
+
     if (!result.ok)
     {
       logging::Error err;
@@ -279,6 +283,9 @@ namespace rego
     }
 
     auto result = m_ast >> m_fast;
+
+    PRINT_ACTION_METRICS();
+
     if (!result.ok)
     {
       logging::Error err;
