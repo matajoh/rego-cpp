@@ -11,7 +11,7 @@ namespace
 {
   using namespace rego;
 
-  using NodeCache = std::shared_ptr<std::map<std::string, Node>>;
+  using NodeCache = std::shared_ptr<std::map<Location, Node>>;
 
   bool contains_multiple_outputs(Node term)
   {
@@ -119,6 +119,122 @@ namespace
     }
 
     return nodes;
+  }
+
+  bool valid_ref(NodeCache cache, NodeRange range)
+  {
+    Node n = range.front();
+    logging::Debug() << "Validating ref: " << n->location().view();
+
+    if (contains(cache, n->location()))
+    {
+      logging::Debug() << "in cache";
+      return true;
+    }
+
+    Nodes nodes;
+    if (n->type() == Ref)
+    {
+      nodes = follow_ref(n);
+    }
+    else
+    {
+      nodes = n->lookup();
+    }
+
+    if (nodes.empty())
+    {
+      logging::Debug() << "No nodes found";
+      return false;
+    }
+
+    Node node = nodes.front();
+    if (node->type() == FastRule)
+    {
+      node = resolve_rule(nodes);
+      if (node == nullptr)
+      {
+        logging::Debug() << "Rule still unresolved";
+        return false;
+      }
+
+      if (node->type() == TermSet)
+      {
+        node = Resolver::reduce_termset(node);
+      }
+
+      if (node->size() > 1)
+      {
+        logging::Debug() << "Multiple terms found for rule";
+        return false;
+      }
+    }
+    else if (node->type() == FastObjectItem)
+    {
+      node = node / Val;
+    }
+
+    if (node->in({Term, DataTerm}))
+    {
+      node = node->front();
+    }
+    else
+    {
+      logging::Debug() << "Unresolved expression";
+      return false;
+    }
+
+    logging::Debug() << "Validated ref: " << n->location().view()
+                     << " to: " << node;
+
+    cache->insert({n->location(), node});
+    return true;
+  }
+
+  Node resolve_ref(NodeCache cache, Node ref)
+  {
+    logging::Debug() << "Resolving ref: " << ref->location().view();
+
+    if (contains(cache, ref->location()))
+    {
+      logging::Debug() << "in cache";
+      return cache->at(ref->location());
+    }
+
+    Nodes nodes;
+    if (ref->type() == Ref)
+    {
+      nodes = follow_ref(ref);
+    }
+    else
+    {
+      nodes = ref->lookup();
+    }
+
+    Node node = nodes.front();
+    if (node->type() == FastRule)
+    {
+      node = resolve_rule(nodes);
+      if (node->type() == TermSet)
+      {
+        node = Resolver::reduce_termset(node);
+      }
+    }
+    else if (node->type() == FastObjectItem)
+    {
+      node = node->back();
+    }
+
+    if (node->in({Term, DataTerm}))
+    {
+      node = node->front();
+    }
+
+    logging::Debug() << "Resolved ref: " << ref->location().view()
+                     << " to: " << node;
+
+    cache->insert({ref->location(), node});
+    return node;
   }
 
   PassDef prep()
@@ -303,7 +419,7 @@ namespace
 
   PassDef resolve()
   {
-    auto fast_cache = std::make_shared<std::map<std::string, std::string>>();
+    auto fast_cache = std::make_shared<std::map<Location, Node>>();
     PassDef pass = {
       "unify",
       wf_fast_unify,
@@ -328,123 +444,42 @@ namespace
             return Term << (Scalar << (False ^ "false"));
           },
 
-        /*  This version segfaults
         In(Expr) * T(FastTimeNowNS)[Key] >>
-          [&fast_cache](Match& _) {
+          [fast_cache](Match& _) {
             ACTION();
-            auto key = std::string(_(Key)->location().view());
-            if(!contains(fast_cache, key)){
+            auto key = _(Key)->location();
+            Node time;
+            if (!contains(fast_cache, key))
+            {
               auto now = std::chrono::system_clock::now();
-              auto now_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now);   
-              auto time_str = std::to_string(now_ns.time_since_epoch().count());           
-              fast_cache->insert({key, time_str});
+              auto now_ns =
+                std::chrono::time_point_cast<std::chrono::nanoseconds>(now);
+              auto time_str = std::to_string(now_ns.time_since_epoch().count());
+              time = Term << (Scalar << (Int ^ time_str));
+              fast_cache->insert({key, time});
+            }
+            else
+            {
+              time = fast_cache->at(key)->clone();
             }
 
-            return Term << (Scalar << (Int ^ fast_cache->at(key)));
-          },
-        */
-
-        In(Expr) * T(FastTimeNowNS)[Key] >>
-          [](Match& _) {
-            ACTION();
-            auto now = std::chrono::system_clock::now();
-            auto now_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now);   
-            auto time_str = std::to_string(now_ns.time_since_epoch().count());           
-            return Term << (Scalar << (Int ^ time_str));
+            return time;
           },
 
-        In(Term) * T(Var)[Var]([](NodeRange n) {
-          Node var = n.front();
-          Nodes nodes = var->lookup();
-          if (nodes.empty())
-          {
-            return false;
-          }
-
-          Node maybe_rule = nodes.front();
-          if (maybe_rule->type() == FastRule)
-          {
-            Node value = resolve_rule(nodes);
-            return value != nullptr;
-          }
-
-          if (nodes.size() != 1)
-          {
-            return false;
-          }
-
-          Node node = nodes.front() / Val;
-          return node->in({DataTerm, Term});
+        In(Term) * T(Var)[Var]([fast_cache](NodeRange range) {
+          return valid_ref(fast_cache, range);
         }) >>
-          [](Match& _) {
+          [fast_cache](Match& _) {
             ACTION();
-            Nodes nodes = (_(Var))->lookup();
-            Node node = nodes.front();
-            if (node->type() == FastRule)
-            {
-              node = resolve_rule(nodes);
-            }
-            else if (node->type() == FastObjectItem)
-            {
-              node = node->back();
-            }
-
-            if (node->in({Term, DataTerm}))
-            {
-              return node->front();
-            }
-
-            return node;
+            return resolve_ref(fast_cache, _(Var));
           },
 
-        In(Term) * T(Ref)[Ref]([](NodeRange n) {
-          Nodes nodes = follow_ref(n.front());
-          if (nodes.size() == 0)
-          {
-            return false;
-          }
-
-          Node node = nodes.front();
-          if (nodes.size() == 1)
-          {
-            node = node->back();
-            if (node->in({Term, DataTerm}))
-            {
-              return true;
-            }
-          }
-
-          if (node->type() == FastRule)
-          {
-            Node value = resolve_rule(nodes);
-            return value != nullptr;
-          }
-
-          return false;
+        In(Term) * T(Ref)[Ref]([fast_cache](NodeRange range) {
+          return valid_ref(fast_cache, range);
         }) >>
-          [](Match& _) {
+          [fast_cache](Match& _) {
             ACTION();
-            Nodes nodes = follow_ref(_(Ref));
-            Node node = nodes.front();
-            if (node->type() == FastRule)
-            {
-              node = resolve_rule(nodes);
-              if (node->type() == TermSet)
-              {
-                node = Resolver::reduce_termset(node);
-              }
-            }
-            else if (node->type() == FastObjectItem)
-            {
-              node = node->back();
-            }
-
-            if (node->in({Term, DataTerm}))
-            {
-              return node->front();
-            }
-
-            return node;
+            return resolve_ref(fast_cache, _(Ref));
           },
 
         In(Expr) *
@@ -479,11 +514,16 @@ namespace
               << (Scalar << Resolver::bininfix(_(Op)->front(), _(Lhs), _(Rhs)));
           },
 
-        In(FastRule) * (T(FastBody)[FastBody] << (T(Term)++ * End)) >>
+        In(FastRule) * (T(FastBody)[FastBody] << (T(Term, Binding)++ * End)) >>
           [](Match& _) {
             ACTION();
             for (auto& node : *_(FastBody))
             {
+              if (node->type() == Binding)
+              {
+                continue;
+              }
+
               if (is_falsy(node))
               {
                 return False ^ "false";
@@ -604,12 +644,12 @@ namespace
           },
       }};
 
-      pass.pre([fast_cache](Node) {
-        fast_cache->clear();
-        return 0;
-      });
+    pass.pre([fast_cache](Node) {
+      fast_cache->clear();
+      return 0;
+    });
 
-      return pass;
+    return pass;
   }
 
   PassDef results()
