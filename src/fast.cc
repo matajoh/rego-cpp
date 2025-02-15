@@ -1,6 +1,7 @@
 #include "fast.hh"
 
 #include "internal.hh"
+#include "rego.hh"
 #include "trieste/json.h"
 #include "trieste/logging.h"
 
@@ -9,6 +10,114 @@
 namespace
 {
   using namespace rego;
+
+  bool contains_multiple_outputs(Node term)
+  {
+    if (term->type() == TermSet)
+    {
+      return true;
+    }
+
+    for (auto& child : *term)
+    {
+      if (contains_multiple_outputs(child))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Node resolve_rule(Nodes values)
+  {
+    Nodes best_terms;
+    std::size_t rank = std::numeric_limits<std::uint16_t>::max();
+    BigInt best_index(rank);
+    for (auto& value : values)
+    {
+      Node rule_body = value / FastBody;
+      Node rule_value = value / Val;
+      Node rule_index = value / Idx;
+      if (rule_body->type() == FastBody)
+      {
+        return nullptr;
+      }
+
+      if (rule_body->type() == False)
+      {
+        continue;
+      }
+
+      BigInt index = BigInt(rule_index->location());
+      if (rule_body->type() == True)
+      {
+        if (index == best_index)
+        {
+          best_terms.push_back(rule_value);
+        }
+        else if (index < best_index)
+        {
+          best_terms.clear();
+          best_terms.push_back(rule_value);
+          best_index = index;
+        }
+      }
+    }
+
+    if (best_terms.size() == 1)
+    {
+      return best_terms.front();
+    }
+
+    if (best_terms.size() == 0)
+    {
+      return Term << Undefined;
+    }
+
+    return Resolver::reduce_termset(TermSet << best_terms);
+  }
+
+  Nodes follow_ref(Node ref)
+  {
+    Node head_var = ref->front()->front();
+    Node args = ref->back();
+    Nodes nodes = head_var->lookup();
+    if (nodes.size() == 0)
+    {
+      return nodes;
+    }
+
+    Node node = nodes.front();
+
+    if (node->in({FastObjectItem, Input}))
+    {
+      node = node / Val;
+    }
+
+    for (auto& arg : *args)
+    {
+      if (node->in({DataTerm, Term}))
+      {
+        node = node->front();
+      }
+
+      Node arg_var = arg->front();
+      nodes = node->lookdown(arg_var->location());
+      if (nodes.size() != 1)
+      {
+        break;
+      }
+
+      node = nodes.front();
+      if (node->type() == FastObjectItem)
+      {
+        node = node / Val;
+      }
+    }
+
+    return nodes;
+  }
 
   PassDef prep()
   {
@@ -190,95 +299,6 @@ namespace
       }};
   }
 
-  Node resolve_rule(Nodes values)
-  {
-    std::size_t rank = std::numeric_limits<std::uint16_t>::max();
-    BigInt best_index(rank);
-    Nodes best_terms;
-    for (auto& value : values)
-    {
-      Node rule_body = value / FastBody;
-      Node rule_value = value / Val;
-      Node rule_index = value / Idx;
-      if (rule_body->type() == FastBody)
-      {
-        return nullptr;
-      }
-
-      if (rule_body->type() == False)
-      {
-        continue;
-      }
-
-      BigInt index = BigInt(rule_index->location());
-      if (rule_body->type() == True)
-      {
-        if (index == best_index)
-        {
-          best_terms.push_back(rule_value);
-        }
-        else
-        {
-          best_terms.clear();
-          best_terms.push_back(rule_value);
-          best_index = index;
-        }
-      }
-      else
-      {
-        logging::Output() << rule_body;
-      }
-    }
-
-    if(best_terms.size() == 1){
-      return best_terms.front();
-    }
-
-    return TermSet << best_terms;
-  }
-
-  Nodes follow_ref(Node ref)
-  {
-    logging::Output() << ref;
-    Node head_var = ref->front()->front();
-    Node args = ref->back();
-    Nodes nodes = head_var->lookup();
-    if (nodes.size() == 0)
-    {
-      return nodes;
-    }
-
-    Node node = nodes.front();
-
-    if (node->in({FastObjectItem, Input}))
-    {
-      node = node / Val;
-    }
-
-    for (auto& arg : *args)
-    {
-      if (node->in({DataTerm, Term}))
-      {
-        node = node->front();
-      }
-
-      Node arg_var = arg->front();
-      nodes = node->lookdown(arg_var->location());
-      if (nodes.size() != 1)
-      {
-        break;
-      }
-
-      node = nodes.front();
-      if (node->type() == FastObjectItem)
-      {
-        node = node / Val;
-      }
-    }
-
-    return nodes;
-  }
-
   PassDef resolve()
   {
     auto now = std::chrono::high_resolution_clock::now().time_since_epoch();
@@ -376,7 +396,6 @@ namespace
             }
           }
 
-          logging::Output() << node;
           if (node->type() == FastRule)
           {
             Node value = resolve_rule(nodes);
@@ -392,6 +411,10 @@ namespace
             if (node->type() == FastRule)
             {
               node = resolve_rule(nodes);
+              if (node->type() == TermSet)
+              {
+                node = Resolver::reduce_termset(node);
+              }
             }
             else if (node->type() == FastObjectItem)
             {
@@ -453,11 +476,113 @@ namespace
           },
 
         In(Rego) *
-            ((T(Query)[Query] << (T(Term, Binding)++ * End)) * T(Input) * T(FastData)) >>
+            ((T(Query)[Query] << (T(Term, Binding)++ * End)) * T(Input) *
+             T(FastData)) >>
           [](Match& _) {
             ACTION();
-            // TODO add code to rewrite the query as a list of results (crib from resolve_query)
-            return _(Query);
+            Nodes results{rego::Result << Terms << Bindings};
+            Node rulebody = _(Query);
+
+            for (auto& child : *rulebody)
+            {
+              if (child->type() == Error)
+              {
+                results.back() / Terms << child;
+                continue;
+              }
+
+              Node var = nullptr;
+              Node term;
+              if (child->type() == Binding)
+              {
+                var = (child / Var)->clone();
+                term = (child / Val)->clone();
+              }
+              else
+              {
+                term = child->clone();
+              }
+
+              if (term->type() == TermSet)
+              {
+                if (term->size() == 0)
+                {
+                  term = Undefined;
+                }
+                else
+                {
+                  term = Resolver::reduce_termset(term);
+                }
+              }
+
+              if (is_undefined(term))
+              {
+                continue;
+              }
+
+              std::string name = "";
+              if (var != nullptr)
+              {
+                name = std::string(var->location().view());
+              }
+
+              if (term == TermSet)
+              {
+                Node termset = term;
+                // there are multiple bindings/terms
+                while (results.size() < termset->size())
+                {
+                  results.push_back(rego::Result << Terms << Bindings);
+                }
+
+                for (std::size_t i = 0; i < termset->size(); i++)
+                {
+                  term = termset->at(i);
+                  if (contains_multiple_outputs(term))
+                  {
+                    results[i] / Terms << err(
+                      term,
+                      "complete rules must not produce multiple outputs",
+                      EvalConflictError);
+                  }
+                  else if (name.empty())
+                  {
+                    results[i] / Terms << term;
+                  }
+                  else
+                  {
+                    results[i] / Bindings << (Binding << var->clone() << term);
+                  }
+                }
+              }
+              else if (results.size() == 1)
+              {
+                if (contains_multiple_outputs(term))
+                {
+                  results.back() / Terms << err(
+                    term,
+                    "complete rules must not produce multiple outputs",
+                    EvalConflictError);
+                }
+                else if (name.empty())
+                {
+                  results.back() / Terms << term;
+                }
+                else if (name.find('$') == std::string::npos || name[0] == '$')
+                {
+                  results.back() / Bindings << (Binding << var << term);
+                }
+              }
+            }
+
+            if (
+              results.size() == 1 && (results.back() / Terms)->empty() &&
+              (results.back() / Bindings)->empty())
+            {
+              results.pop_back();
+            }
+
+            return Query << results;
           },
       }};
   }
@@ -469,7 +594,7 @@ namespace
       wf_result,
       dir::bottomup,
       {
-        In(Top) * (T(Rego) << (T(Query) << T(rego::Result)++[rego::Result])) >>
+        In(Top) * (T(Rego) << (T(Query) << T(rego::Result)++ [rego::Result])) >>
           [](Match& _) {
             ACTION();
             if (_[rego::Result].empty())
@@ -502,7 +627,7 @@ namespace
             ACTION();
             return _(Error);
           },
-      }};    
+      }};
   }
 }
 
@@ -510,13 +635,6 @@ namespace rego
 {
   Rewriter fast()
   {
-    return {
-      "fast_rego",
-      {
-        prep(),
-        resolve(),
-        results()
-      },
-      rego::wf_fast_input};
+    return {"fast_rego", {prep(), resolve(), results()}, rego::wf_fast_input};
   }
 }
