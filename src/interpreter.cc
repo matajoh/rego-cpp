@@ -346,6 +346,7 @@ namespace rego
 
     m_json.debug_path(m_debug_path / "json");
     m_unify.debug_path(m_debug_path / "unify");
+    m_fast.debug_path(m_debug_path / "fast");
     m_to_input.debug_path(m_debug_path / "input");
 
     return *this;
@@ -361,6 +362,7 @@ namespace rego
     m_reader.debug_enabled(enabled);
     m_json.debug_enabled(enabled);
     m_unify.debug_enabled(enabled);
+    m_fast.debug_enabled(enabled);
     m_from_json.debug_enabled(enabled);
     m_to_input.debug_enabled(enabled);
     return *this;
@@ -376,6 +378,7 @@ namespace rego
     m_reader.wf_check_enabled(enabled);
     m_json.wf_check_enabled(enabled);
     m_unify.wf_check_enabled(enabled);
+    m_fast.wf_check_enabled(enabled);
     m_from_json.wf_check_enabled(enabled);
     m_to_input.wf_check_enabled(enabled);
     return *this;

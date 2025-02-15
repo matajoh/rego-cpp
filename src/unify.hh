@@ -59,7 +59,6 @@ namespace rego
   inline const auto Skip = TokenDef("rego-skip", flag::lookup);
   inline const auto BuiltInHook = TokenDef("rego-builtinhook", flag::lookup);
   inline const auto ElseSeq = TokenDef("rego-elseseq");
-  inline const auto TermSet = TokenDef("rego-termset");
   inline const auto IsVarRef = TokenDef("rego-isvarref");
 
   const std::set<Token> RuleTypes(
