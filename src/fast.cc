@@ -421,7 +421,7 @@ namespace
   {
     auto fast_cache = std::make_shared<std::map<Location, Node>>();
     PassDef pass = {
-      "unify",
+      "resolve",
       wf_fast_unify,
       dir::bottomup,
       {
