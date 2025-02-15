@@ -1091,6 +1091,7 @@ namespace rego
     Rewriter m_from_json;
     Rewriter m_to_input;
     std::size_t m_data_count;
+    std::map<std::string, Node> m_cache;
 
     std::string m_c_error;
   };
