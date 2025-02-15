@@ -126,7 +126,7 @@ namespace
     return {
       "prep",
       wf_fast_prep,
-      dir::bottomup,
+      dir::bottomup | dir::once,
       {
         In(Rego) *
             (T(ModuleSeq)
@@ -617,7 +617,7 @@ namespace
     return {
       "results",
       wf_result,
-      dir::bottomup,
+      dir::bottomup | dir::once,
       {
         In(Top) * (T(Rego) << (T(Query) << T(rego::Result)++ [rego::Result])) >>
           [](Match& _) {
