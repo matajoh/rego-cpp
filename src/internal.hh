@@ -164,6 +164,7 @@ namespace rego
   inline const auto DataArray = TokenDef("rego-dataarray");
   inline const auto DataSet = TokenDef("rego-dataset");
   inline const auto DataRule = TokenDef("rego-datarule", flag::lookup);
+  inline const auto TermSet = TokenDef("rego-termset");
 
   template <typename I, typename S, typename F>
   S& join(S& stream, const I& begin, const I& end, const char* sep, F&& writer)
