@@ -11,6 +11,8 @@ namespace
 {
   using namespace rego;
 
+  using NodeCache = std::shared_ptr<std::map<std::string, Node>>;
+
   bool contains_multiple_outputs(Node term)
   {
     if (term->type() == TermSet)
@@ -301,11 +303,8 @@ namespace
 
   PassDef resolve()
   {
-    auto now = std::chrono::high_resolution_clock::now().time_since_epoch();
-    auto now_ns = duration_cast<std::chrono::nanoseconds>(now).count();
-    auto cached_time = std::to_string(now_ns);
-
-    return {
+    auto fast_cache = std::make_shared<std::map<std::string, std::string>>();
+    PassDef pass = {
       "unify",
       wf_fast_unify,
       dir::bottomup,
@@ -329,10 +328,29 @@ namespace
             return Term << (Scalar << (False ^ "false"));
           },
 
-        In(Expr) * T(FastTimeNowNS) >>
-          [cached_time](Match& _) {
+        /*  This version segfaults
+        In(Expr) * T(FastTimeNowNS)[Key] >>
+          [&fast_cache](Match& _) {
             ACTION();
-            return Term << (Scalar << (Int ^ cached_time));
+            auto key = std::string(_(Key)->location().view());
+            if(!contains(fast_cache, key)){
+              auto now = std::chrono::system_clock::now();
+              auto now_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now);   
+              auto time_str = std::to_string(now_ns.time_since_epoch().count());           
+              fast_cache->insert({key, time_str});
+            }
+
+            return Term << (Scalar << (Int ^ fast_cache->at(key)));
+          },
+        */
+
+        In(Expr) * T(FastTimeNowNS)[Key] >>
+          [](Match& _) {
+            ACTION();
+            auto now = std::chrono::system_clock::now();
+            auto now_ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(now);   
+            auto time_str = std::to_string(now_ns.time_since_epoch().count());           
+            return Term << (Scalar << (Int ^ time_str));
           },
 
         In(Term) * T(Var)[Var]([](NodeRange n) {
@@ -585,6 +603,13 @@ namespace
             return Query << results;
           },
       }};
+
+      pass.pre([fast_cache](Node) {
+        fast_cache->clear();
+        return 0;
+      });
+
+      return pass;
   }
 
   PassDef results()
