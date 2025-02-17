@@ -111,7 +111,7 @@ namespace rego
       node = node->front();
     }
 
-    if (node->type() == Term)
+    if (node->in({Term, DataTerm}))
     {
       node = node->front();
     }

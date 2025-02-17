@@ -6,12 +6,63 @@
 #include "trieste/logging.h"
 
 #include <chrono>
+#include <optional>
 
 namespace
 {
   using namespace rego;
 
   using NodeCache = std::shared_ptr<std::map<Location, Node>>;
+
+  bool fast_is_constant(Node node)
+  {
+    std::vector<Node> stack = {node};
+    while (!stack.empty())
+    {
+      node = stack.back();
+      stack.pop_back();
+      if (node->type() == Expr)
+      {
+        logging::Debug() << "Not constant: Expr";
+        return false;
+      }
+
+      if (node->in({Term, DataTerm}))
+      {
+        node = node->front();
+      }
+
+      if (node->type() == Scalar)
+      {
+        continue;
+      }
+
+      if (node->in({Ref, Var}))
+      {
+        logging::Debug() << "Not constant: Ref or Var";
+        return false;
+      }
+
+      if (node->in({Array, Set}))
+      {
+        stack.insert(stack.end(), node->begin(), node->end());
+      }
+      else if (node->in({FastObject, FastDataObject}))
+      {
+        for (auto& child : *node)
+        {
+          stack.push_back(child / Val);
+        }
+      }
+      else
+      {
+        logging::Debug() << "Not constant: " << node->type().str();
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   bool contains_multiple_outputs(Node term)
   {
@@ -80,146 +131,191 @@ namespace
     return Resolver::reduce_termset(TermSet << best_terms);
   }
 
-  Nodes follow_ref(Node ref)
+  std::optional<Node> get_head(Nodes nodes)
   {
-    Node head_var = ref->front()->front();
-    Node args = ref->back();
-    Nodes nodes = head_var->lookup();
-    if (nodes.size() == 0)
-    {
-      return nodes;
-    }
-
     Node node = nodes.front();
 
-    if (node->in({FastObjectItem, Input}))
+    if (node->type() == FastRule)
+    {
+      node = resolve_rule(nodes);
+      if (node == nullptr)
+      {
+        return std::nullopt;
+      }
+
+      if (node->type() == TermSet)
+      {
+        return std::nullopt;
+      }
+    }
+    else if (nodes.size() > 1)
+    {
+      return std::nullopt;
+    }
+
+    if (node->in({FastDataObjectItem, FastObjectItem, Input, FastDataModule}))
     {
       node = node / Val;
     }
 
+    return node;
+  }
+
+  std::optional<Nodes> follow_ref(Node ref)
+  {
+    Node head_var = ref->front()->front();
+    Node args = ref->back();
+    logging::Debug() << "Following ref head=" << head_var->location().view()
+                     << " with " << args->size() << " args";
+    Nodes nodes = head_var->lookup();
+    if (nodes.size() == 0)
+    {
+      // head does not exist
+      return nodes;
+    }
+
+    if (args->empty())
+    {
+      // no args, we're done
+      return nodes;
+    }
+
     for (auto& arg : *args)
     {
-      if (node->in({DataTerm, Term}))
+      auto maybe_head = get_head(nodes);
+      if (!maybe_head.has_value())
       {
-        node = node->front();
+        return std::nullopt;
       }
 
-      Node arg_var = arg->front();
-      nodes = node->lookdown(arg_var->location());
-      if (nodes.size() != 1)
+      Node head = maybe_head.value();
+
+      if (head->in({DataTerm, Term}))
       {
-        break;
+        head = head->front();
       }
 
-      node = nodes.front();
-      if (node->type() == FastObjectItem)
+      if (arg->type() == RefArgDot)
       {
-        node = node / Val;
+        Node arg_var = arg->front();
+        logging::Debug() << "." << arg_var->location().view();
+        nodes = head->lookdown(arg_var->location());
+      }
+      else if (arg->type() == RefArgBrack)
+      {
+        Node key = arg->front();
+        logging::Debug() << "[" << key->location().view() << "]";
+        if (!key->in({Int, JSONString}))
+        {
+          // only int and string keys are supported
+          return std::nullopt;
+        }
+
+        if (head->type() == Array)
+        {
+          logging::Debug() << "Array lookup";
+          // array
+          nodes = Nodes{};
+          auto maybe_index = try_get_int(key);
+          if (maybe_index.has_value())
+          {
+            auto index = maybe_index.value().to_size();
+            if (index < head->size())
+            {
+              nodes.push_back(head->at(index));
+            }
+            else
+            {
+              nodes.push_back(err(
+                key,
+                "Only integer keys are supported on arrays",
+                RegoTypeError));
+              return nodes;
+            }
+          }
+        }
+        else if (head->in({FastObject, FastDataObject}))
+        {
+          logging::Debug() << "Object lookup";
+          // object
+          if (key->type() == JSONString)
+          {
+            Location key_loc = key->location();
+            if (is_quoted(key_loc.view()))
+            {
+              key_loc.pos += 1;
+              key_loc.len -= 2;
+            }
+            nodes = head->lookdown(key->location());
+          }
+          else
+          {
+            nodes.push_back(err(
+              key, "Only string keys are supported on objects", RegoTypeError));
+            return nodes;
+          }
+        }
+        else
+        {
+          logging::Debug() << "Unexpected collection: " << head;
+          return std::nullopt;
+        }
+      }
+      else
+      {
+        nodes.push_back(err(arg, "Unexpected ref arg", RegoTypeError));
+        return nodes;
       }
     }
 
     return nodes;
   }
 
-  bool valid_ref(NodeRange range)
-  {
-    Node n = range.front();
-    logging::Debug() << "Validating ref: " << n->location().view();
-
-    Nodes nodes;
-    if (n->type() == Ref)
-    {
-      nodes = follow_ref(n);
-    }
-    else
-    {
-      nodes = n->lookup();
-    }
-
-    if (nodes.empty())
-    {
-      logging::Debug() << "No nodes found";
-      return false;
-    }
-
-    Node node = nodes.front();
-    if (node->type() == FastRule)
-    {
-      node = resolve_rule(nodes);
-      if (node == nullptr)
-      {
-        logging::Debug() << "Rule still unresolved";
-        return false;
-      }
-
-      if (node->type() == TermSet)
-      {
-        node = Resolver::reduce_termset(node);
-      }
-
-      if (node->size() > 1)
-      {
-        logging::Debug() << "Multiple terms found for rule";
-        return false;
-      }
-    }
-    else if (node->type() == FastObjectItem)
-    {
-      node = node / Val;
-    }
-
-    if (node->in({Term, DataTerm}))
-    {
-      node = node->front();
-    }
-    else
-    {
-      logging::Debug() << "Unresolved expression";
-      return false;
-    }
-
-    logging::Debug() << "Validated ref: " << n->location().view()
-                     << " to: " << node;
-
-    return true;
-  }
-
   Node resolve_ref(Node ref)
   {
-    logging::Debug() << "Resolving ref: " << ref->location().view();
+    logging::Debug() << "Validating ref: " << ref->location().view();
 
     Nodes nodes;
     if (ref->type() == Ref)
     {
-      nodes = follow_ref(ref);
+      auto maybe_nodes = follow_ref(ref);
+      if (!maybe_nodes.has_value())
+      {
+        return nullptr;
+      }
+
+      nodes = maybe_nodes.value();
     }
     else
     {
       nodes = ref->lookup();
     }
 
-    Node node = nodes.front();
-    if (node->type() == FastRule)
+    if (nodes.empty())
     {
-      node = resolve_rule(nodes);
-      if (node->type() == TermSet)
-      {
-        node = Resolver::reduce_termset(node);
-      }
-    }
-    else if (node->type() == FastObjectItem)
-    {
-      node = node->back();
+      logging::Debug() << "No nodes found";
+      return nullptr;
     }
 
-    if (node->in({Term, DataTerm}))
+    auto maybe_head = get_head(nodes);
+    if (!maybe_head.has_value())
+    {
+      return nullptr;
+    }
+
+    Node node = maybe_head.value();
+    if (node->in({Term, DataTerm}) && fast_is_constant(node))
     {
       node = node->front();
     }
+    else
+    {
+      logging::Debug() << "Unresolved expression: " << node;
+      return nullptr;
+    }
 
-    logging::Debug() << "Resolved ref: " << ref->location().view()
+    logging::Debug() << "resolved ref: " << ref->location().view()
                      << " to: " << node;
-
     return node;
   }
 
@@ -303,7 +399,7 @@ namespace
             std::size_t num_items = _(RuleBodySeq)->size();
 
             Node val = _(Expr);
-            if (is_constant(val->front()))
+            if (fast_is_constant(val->front()))
             {
               val = val->front();
             }
@@ -336,7 +432,7 @@ namespace
             ACTION();
             std::size_t rank = std::numeric_limits<std::uint16_t>::max();
             Node value = _(Expr);
-            if (is_constant(value->front()))
+            if (fast_is_constant(value->front()))
             {
               value = value->front();
             }
@@ -436,8 +532,8 @@ namespace
       dir::bottomup,
       {
         T(Expr)
-            << (T(Term)[Term]
-                << T(Scalar, Array, FastObject, Set, Undefined)) >>
+            << (T(Term)[Term] << T(
+                  Scalar, Array, FastObject, FastDataObject, Set, Undefined)) >>
           [](Match& _) {
             ACTION();
             return _(Term);
@@ -476,22 +572,26 @@ namespace
             return time;
           },
 
-        In(Term) * T(Var)[Var]([fast_cache](NodeRange range) {
-          return valid_ref(range);
-        }) >>
-          [fast_cache](Match& _) {
-            ACTION();
-            // TODO use NoChange
-            return resolve_ref(_(Var))->clone();
-          },
+        In(Term) * T(Var)[Var] >> [](Match& _) -> Node {
+          ACTION();
+          Node node = resolve_ref(_(Var));
+          if (node == nullptr)
+          {
+            return NoChange;
+          }
 
-        In(Term) * T(Ref)[Ref]([fast_cache](NodeRange range) {
-          return valid_ref(range);
-        }) >>
-          [fast_cache](Match& _) {
-            ACTION();
-            return resolve_ref(_(Ref))->clone();
-          },
+          return node->clone();
+        },
+
+        In(Term) * T(Ref)[Ref] >> [](Match& _) -> Node {
+          ACTION();
+          Node node = resolve_ref(_(Ref));
+          if (node == nullptr)
+          {
+            return NoChange;
+          }
+          return node->clone();
+        },
 
         In(Expr) *
             (T(ExprInfix)
@@ -525,6 +625,12 @@ namespace
               << (Scalar << Resolver::bininfix(_(Op)->front(), _(Lhs), _(Rhs)));
           },
 
+        In(RefArgBrack) * (T(Term) << (T(Scalar) << T(Int, JSONString)[Key])) >>
+          [](Match& _) {
+            ACTION();
+            return _(Key);
+          },
+
         In(FastRule) * (T(FastBody)[FastBody] << (T(Term, Binding)++ * End)) >>
           [](Match& _) {
             ACTION();
@@ -545,10 +651,15 @@ namespace
           },
 
         In(Query) * (T(FastLocal) << (T(Var)[Var] * T(Term)[Val])) >>
-          [](Match& _) {
-            ACTION();
+          [](Match& _) -> Node {
+          ACTION();
+          if (fast_is_constant(_(Val)))
+          {
             return Binding << _(Var) << _(Val);
-          },
+          }
+
+          return NoChange;
+        },
 
         In(Rego) *
             ((T(Query)[Query] << (T(Term, Binding)++ * End)) * T(Input) *
@@ -684,6 +795,26 @@ namespace
               return Undefined ^ "";
             }
             return Results << _[rego::Result];
+          },
+
+        T(FastObjectItem) << (T(Key)[Key] * T(Term)[Val]) >>
+          [](Match& _) {
+            ACTION();
+            return ObjectItem << (Term << (Scalar << (JSONString ^ _(Key))))
+                              << _(Val);
+          },
+
+        T(FastDataObjectItem) << (T(Key)[Key] * T(DataTerm)[Val]) >>
+          [](Match& _) {
+            ACTION();
+            return ObjectItem << (Term << (Scalar << (JSONString ^ _(Key))))
+                              << (Term << *_[Val]);
+          },
+
+        T(FastObject, FastDataObject)[Object] >>
+          [](Match& _) {
+            ACTION();
+            return Object << *_[Object];
           },
 
         (T(Array) / T(Set)) * T(Error)[Error] >>
