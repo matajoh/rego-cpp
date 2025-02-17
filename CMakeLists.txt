@@ -227,7 +227,7 @@ endif()
 
 if (REGOCPP_BUILD_TESTS)
   install(TARGETS rego_test rego_test_c_api RUNTIME)
-  install(FILES tests/regocpp.yaml tests/bigint.yaml tests/bugs.yaml tests/regov1.yaml tests/bad.json DESTINATION tests)
+  install(FILES tests/regocpp.yaml tests/bigint.yaml tests/bugs.yaml tests/regov1.yaml tests/fast.yaml tests/bad.json DESTINATION tests)
   install(DIRECTORY tests/aci DESTINATION tests)
   install(DIRECTORY tests/cts DESTINATION tests)
 endif()

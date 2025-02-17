@@ -46,5 +46,6 @@ cases:
         svn: 0
     profile: 0
   query: x=data.policy.allow
+  fast: true
   want_result: 
   - x: true

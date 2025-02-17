@@ -231,25 +231,40 @@ namespace
       dir::bottomup | dir::once,
       {
         In(Rego) *
-            (T(ModuleSeq)
-             << (T(Module)
-                 << ((T(Package)
-                      << (T(Ref) << ((T(RefHead) << T(Var)[Var])) *
-                            (T(RefArgSeq) << End))) *
-                     T(Version) * (T(ImportSeq) << End) *
-                     T(Policy)[Policy]))) >>
+            (T(Query)[Query] * T(Input)[Input] *
+             (T(DataSeq)[DataSeq] << (T(FastDataModule)++ * End)) *
+             (T(ModuleSeq)[ModuleSeq] << (T(FastModule)++ * End))) >>
           [](Match& _) {
             ACTION();
-            return FastData << (Key ^ "data")
-                            << (FastModule << (Key ^ _(Var)) << _(Policy));
+            auto input = Input << (Key ^ "input") << *_[Input];
+            auto moduleseq = FastModuleSeq << *_[ModuleSeq] << *_[DataSeq];
+            auto fastdata = FastData << (Key ^ "data") << moduleseq;
+            return Seq << _(Query) << input << fastdata;
           },
 
-        In(Rego) * (T(DataSeq) << End) >> [](Match&) { return nullptr; },
-
-        In(Rego) * (T(Input) << T(DataTerm)[Val]) >>
+        In(ModuleSeq) *
+            (T(Module)
+             << ((T(Package)
+                  << (T(Ref) << ((T(RefHead) << T(Var)[Var])) *
+                        (T(RefArgSeq) << End))) *
+                 T(Version) * (T(ImportSeq) << End) * T(Policy)[Policy])) >>
           [](Match& _) {
             ACTION();
-            return Input << (Key ^ "input") << _(Val);
+            return FastModule << (Key ^ _(Var)) << _(Policy);
+          },
+
+        In(DataSeq) *
+            (T(Data) << (T(DataTerm) << T(FastDataObject)[FastDataObject])) >>
+          [](Match& _) {
+            ACTION();
+            Node seq = NodeDef::create(Seq);
+            for (auto& item : *_(FastDataObject))
+            {
+              auto key = item / Key;
+              auto val = item / Val;
+              seq << (FastDataModule << key << (DataTerm << *val));
+            }
+            return seq;
           },
 
         In(Query) *
@@ -352,23 +367,31 @@ namespace
             return (FastRegexMatch ^ _(RefHead)) << _(Lhs) << _(Rhs);
           },
 
-        T(DataObject, Object)[Object] >> [](Match& _) {
-          ACTION();
-          return FastObject << *_[Object];
-        },
+        T(Object)[Object] >>
+          [](Match& _) {
+            ACTION();
+            return FastObject << *_[Object];
+          },
+
+        T(DataObject)[DataObject] >>
+          [](Match& _) {
+            ACTION();
+            return FastDataObject << *_[DataObject];
+          },
 
         In(DataObject) *
             (T(DataObjectItem)
              << ((T(DataTerm) << (T(Scalar) << T(JSONString)[Key]))) *
-                 T(DataTerm)[Val]) >>
+               T(DataTerm)[Val]) >>
           [](Match& _) {
             ACTION();
             Location loc = _(Key)->location();
-            if(is_quoted(loc.view())){
+            if (is_quoted(loc.view()))
+            {
               loc.pos += 1;
               loc.len -= 2;
             }
-            return FastObjectItem << (FastObjectKey ^ loc) << (Term << *_[Val]);
+            return FastDataObjectItem << (Key ^ loc) << (DataTerm << *_[Val]);
           },
 
         In(Object) *
@@ -378,11 +401,12 @@ namespace
           [](Match& _) {
             ACTION();
             Location loc = _(Key)->location();
-            if(is_quoted(loc.view())){
+            if (is_quoted(loc.view()))
+            {
               loc.pos += 1;
               loc.len -= 2;
             }
-            return FastObjectItem << (FastObjectKey ^ loc) << _(Val);
+            return FastObjectItem << (Key ^ loc) << _(Val);
           },
 
         In(Scalar) * (T(String) << T(RawString)[RawString]) >>
@@ -408,7 +432,7 @@ namespace
     auto fast_cache = std::make_shared<std::map<Location, Node>>();
     PassDef pass = {
       "resolve",
-      wf_fast_unify,
+      wf_fast_resolve,
       dir::bottomup,
       {
         T(Expr)
@@ -457,7 +481,8 @@ namespace
         }) >>
           [fast_cache](Match& _) {
             ACTION();
-            return resolve_ref(_(Var));
+            // TODO use NoChange
+            return resolve_ref(_(Var))->clone();
           },
 
         In(Term) * T(Ref)[Ref]([fast_cache](NodeRange range) {
@@ -465,7 +490,7 @@ namespace
         }) >>
           [fast_cache](Match& _) {
             ACTION();
-            return resolve_ref(_(Ref));
+            return resolve_ref(_(Ref))->clone();
           },
 
         In(Expr) *
@@ -517,6 +542,12 @@ namespace
             }
 
             return True ^ "true";
+          },
+
+        In(Query) * (T(FastLocal) << (T(Var)[Var] * T(Term)[Val])) >>
+          [](Match& _) {
+            ACTION();
+            return Binding << _(Var) << _(Val);
           },
 
         In(Rego) *
