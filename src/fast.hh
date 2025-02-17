@@ -15,6 +15,7 @@ namespace rego
   inline const auto FastRegexMatch = TokenDef("fast-rego-regexmatch");
   inline const auto FastObject= TokenDef("fast-rego-object", flag::lookdown | flag::lookup | flag::symtab);
   inline const auto FastObjectItem = TokenDef("fast-rego-objectitem", flag::lookdown | flag::lookup);
+  inline const auto FastObjectKey = TokenDef("fast-rego-objectkey", flag::print);
 
   // clang-format off
   inline const auto wf_fast_input =
@@ -34,21 +35,21 @@ namespace rego
   // clang-format off
   inline const auto wf_fast_prep =
     wf_fast_input
-    | (Rego <<= Query * FastData * Input)
+    | (Rego <<= Query * Input * FastData)
     | (FastData <<= Key * (Val >>= FastModule))[Key]
     | (Query <<= (FastLocal | Expr | NotExpr)++)
     | (Input <<= Key * (Val >>= DataTerm | Undefined))[Key]
     | (FastModule <<= Key * Policy)[Key]
     | (Policy <<= FastRule++)
     | (FastRule <<= Var * FastBody * (Val >>= (Expr | Term)) * (Idx >>= Int))[Var]
-    | (FastBody <<= (FastLocal | Expr)++)
+    | (FastBody <<= (FastLocal | Expr | NotExpr)++)
     | (FastLocal <<= Var * (Val >>= Expr))[Var]
     | (Expr <<= (Term | ExprInfix | ExprParens | UnaryExpr | FastTimeNowNS | FastRegexMatch))
     | (Term <<= Ref | Var | Scalar | Array | FastObject | Set)
     | (DataTerm <<= Scalar | DataArray | FastObject | DataSet)
     | (FastObject <<= FastObjectItem++)
     | (FastRegexMatch <<= Expr * Expr)
-    | (FastObjectItem <<= (Key >>= JSONString) * (Val >>= Expr))[Key]
+    | (FastObjectItem <<= FastObjectKey * (Val >>= Term | Expr))[FastObjectKey]
     | (Scalar <<= JSONString | Int | Float | True | False | Null)
     ;
   // clang-format on
