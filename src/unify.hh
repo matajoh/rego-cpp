@@ -5,7 +5,6 @@
 
 namespace rego
 {
-  inline const auto Data = TokenDef("rego-data", flag::lookup);
   inline const auto Submodule =
     TokenDef("rego-submodule", flag::lookdown | flag::lookup);
 

@@ -206,7 +206,8 @@ namespace rego_test
     m_want_defined(false),
     m_sort_bindings(false),
     m_strict_error(false),
-    m_broken(false)
+    m_broken(false),
+    m_fast(false)
   {}
 
   std::optional<Node> TestCase::maybe_get_object(
@@ -593,7 +594,8 @@ namespace rego_test
         .want_error_code(get_string(test_case_obj, "want_error_code"))
         .want_error(get_string(test_case_obj, "want_error"))
         .sort_bindings(get_bool(test_case_obj, "sort_bindings"))
-        .strict_error(get_bool(test_case_obj, "strict_error"));
+        .strict_error(get_bool(test_case_obj, "strict_error"))
+        .fast(get_bool(test_case_obj, "fast"));
 
       // --- Special Cases --- //
       // these test cases require some modification due to differences between
@@ -665,7 +667,7 @@ namespace rego_test
     bool wf_checks,
     bool v1_compatible) const
   {
-    rego::Interpreter interpreter(v1_compatible);
+    rego::Interpreter interpreter(v1_compatible | m_fast);
     interpreter.builtins().strict_errors(m_strict_error);
     interpreter.builtins().register_builtin(
       BuiltInDef::create(Location("test.sleep"), 1, test_sleep));
@@ -705,7 +707,15 @@ namespace rego_test
     {
       try
       {
-        actual = interpreter.raw_query(m_query);
+        if (m_fast)
+        {
+          interpreter.set_query(m_query);
+          actual = interpreter.fast_query();
+        }
+        else
+        {
+          actual = interpreter.raw_query(m_query);
+        }
       }
       catch (const std::exception& e)
       {
@@ -1006,6 +1016,17 @@ namespace rego_test
   TestCase& TestCase::broken(bool broken)
   {
     m_broken = broken;
+    return *this;
+  }
+
+  bool TestCase::fast() const
+  {
+    return m_fast;
+  }
+
+  TestCase& TestCase::fast(bool fast)
+  {
+    m_fast = fast;
     return *this;
   }
 }

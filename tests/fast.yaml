@@ -1,0 +1,437 @@
+cases:
+- modules:
+  - |1
+       
+      
+     package scalars
+     
+     greeting := "Hello"
+     max_height := 42
+     pi := 3.14159
+     allowed := true
+     location := null
+  note       : fast/scalars
+  fast       : true
+  query      : x:=data.scalars.greeting
+  want_result:
+    - x: Hello
+- data:
+    one:
+      bar: Foo
+      baz: 5
+      be : true
+      bop: 23.4
+    two:
+      bar: Bar
+      baz: 12.3
+      be : false
+      bop: 42
+    three:
+      bar: Baz
+      baz: 15
+      be : true
+      bop: 4.23
+  input:
+    a: 10
+    b: "20"
+    c: 30.0
+    d: true
+  modules:
+  - |
+    package objects
+    
+    rect := {`width`: 2, "height": 4}
+    cube := {"width": 3, `height`: 4, "depth": 5}
+    a := 42
+    b := false
+    c := null
+    d := {"a": a, "x": [b, c]}
+    index := 1
+    shapes := [rect, cube]
+    names := ["prod", `smoke1`, "dev"]
+    sites := [{"name": "prod"}, {"name": names[index]}, {"name": "dev"}]
+    e := {
+        "42": "foo",
+        "three": c,
+        "dev": b,
+        "four": d,
+    }
+    f := e[names[2]]
+  note : fast/input_data
+  fast : true
+  query: "x := [data.one,
+    input.b, 
+    data.objects.sites[1]]"
+  want_result:
+    - x:
+      - bar: Foo
+        baz: 5
+        be: true
+        bop: 23.4
+      - "20"
+      - name: smoke1
+- modules:
+  - |
+    package objects
+    
+    rect := {`width`: 2, "height": 4}
+    cube := {"width": 3, `height`: 4, "depth": 5}
+    a := 42
+    b := false
+    c := null
+    d := {"a": a, "x": [b, c]}
+    index := 1
+    shapes := [rect, cube]
+    names := ["prod", `smoke1`, "dev"]
+    sites := [{"name": "prod"}, {"name": names[index]}, {"name": "dev"}]
+    e := {
+        a: "foo",
+        "three": c,
+        names[2]: b,
+        "four": d,
+    }
+    f := e["dev"]
+  note : fast/objects
+  fast : true
+  query: data.objects.sites[1].name = x
+  want_result:
+    - x: smoke1
+- note: fast/query_math
+  fast: true
+  query: 'x=5;
+    y=x + (2 - 4 * 0.25) * -3 + 7.4'
+  sort_bindings: true
+  want_result:
+    - x: 5
+      y: 9.4
+- note: fast/expressions
+  fast: true
+  modules:
+  - |
+    package expressions
+    
+    a := 5
+    b := -2
+    c := a + b
+    d := c * -2.5
+    e := (a + b) == 7
+    f := (c + d) != 7
+    g := 3 > -1
+    h := 2.5 >= a
+    i := b < a
+    j := 1.0 <= 2.1
+    k := a - (b + -c) * (-d / 2) + 3.7
+  query: data.expressions.k > 27 = x
+  want_result:
+    - x: true
+- note: fast/bodies
+  fast: true
+  modules:
+  - |
+    package bodies
+    
+    val := -1
+    a := 5
+    b := 3
+    c := a + b { a; b; a > b }
+    d := val {
+      input.a < a
+      val := a + data.bodies.b
+    } {
+      input.a >= data.bodies.a
+      val := a - b
+    }
+    
+    e := {"one": x, "two": y + z} {
+      x := a * b
+      c
+      y := d
+      z := x - y
+    }
+    
+    default f := false
+    
+    f {
+      b < a
+      not d
+    }
+    
+    f {
+      input.c > d
+    }
+    
+    g {
+      d == a + b
+      a < b
+    }
+  input:
+    a: 10
+    b: "20"
+    c: 30.0
+    d: true
+  query: data.bodies.e = x
+  want_result:
+    - x:
+        one: 15
+        two: 15
+- note: fast/bodies_undef
+  fast: true
+  modules:
+  - |
+    package bodies
+    
+    val := -1
+    a := 5
+    b := 3
+    c := a + b { a; b; a > b }
+    d := val {
+      input.a < a
+      val := a + data.bodies.b
+    } {
+      input.a >= data.bodies.a
+      val := a - b
+    }
+    
+    e := {"one": x, "two": y + z} {
+      x := a * b
+      c
+      y := d
+      z := x - y
+    }
+    
+    default f := false
+    
+    f {
+      b < a
+      not d
+    }
+    
+    f {
+      input.c > d
+    }
+    
+    g {
+      d == a + b
+      a < b
+    }
+  input:
+    a: 10
+    b: "20"
+    c: 30.0
+    d: true
+  query: data.bodies.g = x
+  want_defined: false
+- note: fast/sets
+  fast: true
+  modules:
+  - |
+    package sets
+    
+    a := 1
+    b := 1
+    c := 2
+    d := 3
+    
+    e := "one"
+    f := "one"
+    g := "two"
+    h := "three" {
+      d > c
+      c > b
+      b >= a
+    }
+    
+    i := {"foo": 1}
+    j := {"foo": 1}
+    k := {"foo": 2, "bar": 1, "baz": 1}
+    l := {"foo": 3, "bar": 2, "baz": 1}
+    
+    int_set := {4, a, c, d, b}
+    string_set := {"four", g, f, e}
+    obj_set := {i, j, k, l}
+    array_set := {[a, b], [b, a], [a, c], [a, d], [b, c], [b, d], [c, d]}
+    
+    empty_set := set()
+  query: data.sets.string_set = x
+  want_result:
+    - x:
+        - four
+        - one
+        - two
+- note: fast/sets_membership
+  fast: true
+  modules:
+  - |
+    package sets
+       
+    i := {"foo": 1}
+    j := {"foo": 1}
+    k := {"foo": 2, "bar": 1, "baz": 1}
+    l := {"foo": 3, "bar": 2, "baz": 1}
+    
+    obj_set := {i, j, k, l}
+    
+    empty_set := set()
+    
+    m {
+      data.sets.obj_set[{"foo": 1}]
+    }
+  query: data.sets.m = x
+  want_result:
+    - x: true
+- note: fast/multi/0
+  fast: true
+  input:
+    a: 10
+  modules:
+  - |
+    package multi
+
+    default a := 0
+
+    a := val {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 1
+        val := input.a * 10
+    } {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 0
+        val := input.a * 10 + 1
+    }
+    
+    a := input.a / 10 {
+        input.a >= 10
+    }
+  query: data.multi.a = x
+  want_result:
+    - x: 1
+- note: fast/multi/1
+  fast: true
+  input:
+    a: 4
+  modules:
+  - |
+    package multi
+
+    default a := 0
+
+    a := val {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 1
+        val := input.a * 10
+    } {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 0
+        val := input.a * 10 + 1
+    }
+    
+    a := input.a / 10 {
+        input.a >= 10
+    }
+  query: data.multi.a = x
+  want_result:
+    - x: 41
+- note: fast/multi/2
+  fast: true
+  input:
+    a: 7
+  modules:
+  - |
+    package multi
+
+    default a := 0
+
+    a := val {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 1
+        val := input.a * 10
+    } {
+        input.a > 0
+        input.a < 10
+        input.a % 2 == 0
+        val := input.a * 10 + 1
+    }
+    
+    a := input.a / 10 {
+        input.a >= 10
+    }
+  query: data.multi.a = x
+  want_result:
+    - x: 70
+- note: fast/compare
+  fast: true
+  modules:
+  - |
+    package compare
+
+    a := {"one": 1, "two": 2}
+    b := {"two": 2, "three": 3}
+    c := "2"
+    d := "0001"
+    e := [0, 1, 2]
+    f := [0, 0, 0, 4]
+    g := {"b": "2", "a": "1"}
+    h := {"b": "1", "a": "2"}
+
+    output := [a < b, c < d, e < f, g < h]
+  query: data.compare.output = x
+  want_result:
+    - x: [true, false, false, true]
+- note: fast/setops
+  fast: true
+  modules:
+  - |
+    package setops
+
+    a := {1, 2, 3, 4}
+    b := {3, 4, 5}
+    c := {4, 5, 6}
+    d := {2, 3, 4}
+    e := a | b & c | d
+    f := {x | some x in b & c | d}
+    g := [a | b]
+    h := [a | b, 4]
+    i := { a: b | c }
+    j := { a: b, c: d | e}
+    k := a - d
+
+    output {
+      e == {1, 2, 3, 4, 5}
+        f == {2, 3, 4, 5}
+        g == [a]
+        h == [{1, 2, 3, 4, 5}, 4]
+        i == {
+          a: {3, 4, 5}
+        }
+        j == {
+          a: {3, 4, 5},
+            c: {1, 2, 3, 4, 5}
+        }
+        k == {1}
+        1 in a | b
+        3 in a & b | c & d
+    }
+  query: data.setops.output = x
+  want_result:
+    - x: true
+- note: fast/time
+  fast: true
+  modules:
+  - |
+    package time
+
+    now_ns := time.now_ns()
+
+    is_same if {
+      test := now_ns
+      test.sleep("1ms")
+      test == time.now_ns()
+    }
+  query: x:=data.time.is_same
+  want_result:
+    - x: true

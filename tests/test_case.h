@@ -89,6 +89,10 @@ namespace rego_test
     bool broken() const;
     TestCase& broken(bool broken);
 
+    /** indicates that this is a test of the fast query system. */
+    bool fast() const;
+    TestCase& fast(bool fast);
+
   private:
     BindingMaps to_binding_maps(const Node& node) const;
     bool compare(
@@ -127,6 +131,7 @@ namespace rego_test
     bool m_sort_bindings;
     bool m_strict_error;
     bool m_broken;
+    bool m_fast;
   };
 
 }
