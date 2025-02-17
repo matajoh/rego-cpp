@@ -121,16 +121,10 @@ namespace
     return nodes;
   }
 
-  bool valid_ref(NodeCache cache, NodeRange range)
+  bool valid_ref(NodeRange range)
   {
     Node n = range.front();
     logging::Debug() << "Validating ref: " << n->location().view();
-
-    if (contains(cache, n->location()))
-    {
-      logging::Debug() << "in cache";
-      return true;
-    }
 
     Nodes nodes;
     if (n->type() == Ref)
@@ -187,19 +181,12 @@ namespace
     logging::Debug() << "Validated ref: " << n->location().view()
                      << " to: " << node;
 
-    cache->insert({n->location(), node});
     return true;
   }
 
-  Node resolve_ref(NodeCache cache, Node ref)
+  Node resolve_ref(Node ref)
   {
     logging::Debug() << "Resolving ref: " << ref->location().view();
-
-    if (contains(cache, ref->location()))
-    {
-      logging::Debug() << "in cache";
-      return cache->at(ref->location());
-    }
 
     Nodes nodes;
     if (ref->type() == Ref)
@@ -233,7 +220,6 @@ namespace
     logging::Debug() << "Resolved ref: " << ref->location().view()
                      << " to: " << node;
 
-    cache->insert({ref->location(), node});
     return node;
   }
 
@@ -366,28 +352,23 @@ namespace
             return (FastRegexMatch ^ _(RefHead)) << _(Lhs) << _(Rhs);
           },
 
-        In(DataTerm) * T(DataObject)[DataObject] >>
-          [](Match& _) {
-            ACTION();
-            return FastObject << *_[DataObject];
-          },
+        T(DataObject, Object)[Object] >> [](Match& _) {
+          ACTION();
+          return FastObject << *_[Object];
+        },
 
-        In(Term) * T(Object)[Object] >>
+        In(DataObject) *
+            (T(DataObjectItem)
+             << ((T(DataTerm) << (T(Scalar) << T(JSONString)[Key]))) *
+                 T(DataTerm)[Val]) >>
           [](Match& _) {
             ACTION();
-            return FastObject << *_[Object];
-          },
-
-        In(DataObject) * T(DataObjectItem)[DataObjectItem] >>
-          [](Match& _) {
-            ACTION();
-            return FastObjectItem << *_[DataObjectItem];
-          },
-
-        In(Object) * T(ObjectItem)[ObjectItem] >>
-          [](Match& _) {
-            ACTION();
-            return FastObjectItem << *_[ObjectItem];
+            Location loc = _(Key)->location();
+            if(is_quoted(loc.view())){
+              loc.pos += 1;
+              loc.len -= 2;
+            }
+            return FastObjectItem << (FastObjectKey ^ loc) << (Term << *_[Val]);
           },
 
         In(Object) *
@@ -396,7 +377,12 @@ namespace
                  T(Expr)[Val])) >>
           [](Match& _) {
             ACTION();
-            return ObjectItem << _(Key) << _(Val);
+            Location loc = _(Key)->location();
+            if(is_quoted(loc.view())){
+              loc.pos += 1;
+              loc.len -= 2;
+            }
+            return FastObjectItem << (FastObjectKey ^ loc) << _(Val);
           },
 
         In(Scalar) * (T(String) << T(RawString)[RawString]) >>
@@ -467,19 +453,19 @@ namespace
           },
 
         In(Term) * T(Var)[Var]([fast_cache](NodeRange range) {
-          return valid_ref(fast_cache, range);
+          return valid_ref(range);
         }) >>
           [fast_cache](Match& _) {
             ACTION();
-            return resolve_ref(fast_cache, _(Var));
+            return resolve_ref(_(Var));
           },
 
         In(Term) * T(Ref)[Ref]([fast_cache](NodeRange range) {
-          return valid_ref(fast_cache, range);
+          return valid_ref(range);
         }) >>
           [fast_cache](Match& _) {
             ACTION();
-            return resolve_ref(fast_cache, _(Ref));
+            return resolve_ref(_(Ref));
           },
 
         In(Expr) *
