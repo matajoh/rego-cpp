@@ -73,6 +73,7 @@ namespace rego
     | (Bindings <<= Binding++)
     | (Binding <<= Var * (Val >>= Term))[Var]
     | (Term <<= Scalar | Array | Object | Set)
+    | (ObjectItem <<= (Key >>= Term) * (Val >>= Term))
     ;
   // clang-format on
 }
