@@ -44,12 +44,24 @@ f := e["dev"])");
         "bop": 4.23
     }
 })");
-  rego.set_input_json(R"({
+  rego.set_input_term(R"({
     "a": 10,
     "b": "20",
     "c": 30.0,
     "d": true
 })");
+  std::cout << rego.query("[data.one, input.b, data.objects.sites[1]] = x")
+            << std::endl;
+
+  // we can also assemble the input term manually
+  rego::Node input = rego::object({
+    rego::object_item(rego::scalar("a"), rego::scalar(rego::BigInt(10L))),
+    rego::object_item(rego::scalar("b"), rego::scalar("20")),
+    rego::object_item(rego::scalar("c"), rego::scalar(30.0)),
+    rego::object_item(rego::scalar("d"), rego::scalar(true)),
+  });
+
+  rego.set_input(input);
   std::cout << rego.query("[data.one, input.b, data.objects.sites[1]] = x")
             << std::endl;
 }

@@ -897,7 +897,7 @@ namespace rego
    * rego.add_module_file("objects.rego");
    * rego.add_data_json_file("data0.json");
    * rego.add_data_json_file("data1.json");
-   * rego.add_input_json_file("input0.json");
+   * rego.set_input_json_file("input0.json");
    * std::cout << rego.query("[data.one, input.b, data.objects.sites[1]]") <<
    * std::endl;
    * ```
@@ -969,7 +969,7 @@ namespace rego
     /**
      * Sets the input document to the interpreter.
      *
-     * This is the same as calling Interpreter::add_input_json with the contents
+     * This is the same as calling Interpreter::set_input_json with the contents
      * of the file.
      *
      * @param path The path to the input file.
@@ -977,6 +977,18 @@ namespace rego
      * valid.
      */
     Node set_input_json_file(const std::filesystem::path& path);
+
+    /**
+     * Sets the input document to the interpreter.
+     *
+     * The document must contain a single JSON-encoded object, and will be
+     * parsed and set as the interpreter's input.
+     *
+     * @param json The contents of the document.
+     * @returns either an error node or a nullptr if the input document is
+     * valid.
+     */
+    Node set_input_json(const std::string& json);
 
     /**
      * Sets the input term of the interpreter.

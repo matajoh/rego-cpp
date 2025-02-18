@@ -1,6 +1,7 @@
 #include <CLI/CLI.hpp>
 #include <chrono>
 #include <rego/rego.hh>
+#include <sstream>
 #include <trieste/logging.h>
 
 class Timer
@@ -115,11 +116,19 @@ int main(int argc, char** argv)
       return 1;
     }
 
+    std::string json_contents;
+    {
+      std::ifstream input_file(input_path);
+      std::ostringstream os;
+      os << input_file.rdbuf();
+      json_contents = os.str();
+    }
+
     rego::Node result;
     try
     {
-      Timer timer("Set input JSON file", timing);
-      result = interpreter->set_input_json_file(input_path);
+      Timer timer("Set input JSON", timing);
+      result = interpreter->set_input_json(json_contents);
     }
     catch (const std::exception& e)
     {

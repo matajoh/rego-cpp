@@ -10,6 +10,53 @@ namespace
   using namespace rego;
   using namespace wf::ops;
   const auto wf_errors = rego::wf | (Error <<= ErrorMsg * ErrorAst * ErrorCode);
+
+  Node to_data(Node node)
+  {
+    if (node->in({Scalar, DataTerm}))
+    {
+      return node;
+    }
+
+    if (node->type() == Term)
+    {
+      return DataTerm << to_data(node->front());
+    }
+
+    if (node->type() == Array)
+    {
+      Nodes children;
+      for (auto& child : *node)
+      {
+        children.push_back(to_data(child));
+      }
+      return DataArray << children;
+    }
+
+    if (node->type() == Object)
+    {
+      Nodes children;
+      for (auto& child : *node)
+      {
+        children.push_back(
+          DataObjectItem << (Key << to_data(child / Key))
+                         << (Val << to_data(child / Val)));
+      }
+      return DataObject << children;
+    }
+
+    if (node->type() == Set)
+    {
+      Nodes children;
+      for (auto& child : *node)
+      {
+        children.push_back(to_data(child));
+      }
+      return DataSet << children;
+    }
+
+    return err(node, "Invalid data term");
+  }
 }
 
 namespace rego
@@ -204,19 +251,26 @@ namespace rego
     return nullptr;
   }
 
-  Node Interpreter::set_input(const Node& node)
+  Node Interpreter::set_input_json(const std::string& json)
   {
-    logging::Info() << "Setting input from JSON AST";
-    auto result = node >> m_from_json.debug_path(m_debug_path / "input");
+    logging::Info() << "Setting input (" << json.size() << " bytes)";
+    auto result =
+      m_json.synthetic(json) >> m_from_json.debug_path(m_debug_path / "input");
     if (!result.ok)
     {
       logging::Error err;
       result.print_errors(err);
       return ErrorSeq << result.errors;
-      ;
     }
 
     merge(Input << result.ast->front());
+    return nullptr;
+  }
+
+  Node Interpreter::set_input(const Node& node)
+  {
+    logging::Info() << "Setting input AST";
+    merge(Input << to_data(node));
     return nullptr;
   }
 
