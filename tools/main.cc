@@ -1,6 +1,34 @@
 #include <CLI/CLI.hpp>
+#include <chrono>
 #include <rego/rego.hh>
 #include <trieste/logging.h>
+
+class Timer
+{
+private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_start_time;
+  std::string m_name;
+  bool m_print;
+
+public:
+  Timer(std::string name, bool print) : m_name(name)
+  {
+    m_start_time = std::chrono::high_resolution_clock::now();
+    m_print = print;
+  }
+
+  ~Timer()
+  {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      end_time - m_start_time);
+    if (m_print)
+    {
+      trieste::logging::Output() << m_name << " took " << duration.count()
+                                 << " microseconds" << std::endl;
+    }
+  }
+};
 
 int main(int argc, char** argv)
 {
@@ -45,6 +73,17 @@ int main(int argc, char** argv)
   bool fast{false};
   app.add_flag("-f,--fast", fast, "Use fast query mode");
 
+  bool timing{false};
+  app.add_flag("-t,--timing", timing, "Print timing information");
+
+#ifndef NDEBUG
+  if (timing)
+  {
+    trieste::logging::Warn()
+      << "Timing requested on a debug build!" << std::endl;
+  }
+#endif
+
   try
   {
     app.parse(argc, argv);
@@ -54,12 +93,17 @@ int main(int argc, char** argv)
     return app.exit(e);
   }
 
-  auto interpreter = rego::Interpreter(v1_compatible || fast);
-  interpreter.wf_check_enabled(wf_checks);
+  std::shared_ptr<rego::Interpreter> interpreter;
+  {
+    Timer timer("Interpreter creation", timing);
+    interpreter = std::make_shared<rego::Interpreter>(v1_compatible || fast);
+  }
+
+  interpreter->wf_check_enabled(wf_checks);
   if (!output.empty())
   {
-    interpreter.debug_enabled(true);
-    interpreter.debug_path(output);
+    interpreter->debug_enabled(true);
+    interpreter->debug_path(output);
   }
 
   if (!input_path.empty())
@@ -74,7 +118,8 @@ int main(int argc, char** argv)
     rego::Node result;
     try
     {
-      result = interpreter.set_input_json_file(input_path);
+      Timer timer("Set input JSON file", timing);
+      result = interpreter->set_input_json_file(input_path);
     }
     catch (const std::exception& e)
     {
@@ -105,11 +150,13 @@ int main(int argc, char** argv)
       rego::Node result;
       if (path.extension() == ".json")
       {
-        result = interpreter.add_data_json_file(path);
+        Timer timer("Add data JSON file: " + path.string(), timing);
+        result = interpreter->add_data_json_file(path);
       }
       else
       {
-        result = interpreter.add_module_file(path);
+        Timer timer("Add data module file: " + path.string(), timing);
+        result = interpreter->add_module_file(path);
       }
 
       if (result != nullptr)
@@ -131,14 +178,22 @@ int main(int argc, char** argv)
   {
     if (fast)
     {
-      interpreter.set_query(query_expr);
-      auto result = interpreter.fast_query();
+      {
+        Timer timer("Set query", timing);
+        interpreter->set_query(query_expr);
+      }
+      rego::Node result;
+      {
+        Timer timer("Fast query", timing);
+        result = interpreter->fast_query();
+      }
       trieste::logging::Output()
-        << interpreter.output_to_string(result) << std::endl;
+        << interpreter->output_to_string(result) << std::endl;
     }
     else
     {
-      trieste::logging::Output() << interpreter.query(query_expr) << std::endl;
+      Timer timer("Query", timing);
+      trieste::logging::Output() << interpreter->query(query_expr) << std::endl;
     }
     return 0;
   }
