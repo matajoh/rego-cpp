@@ -15,6 +15,7 @@ endif()
 
 add_test(NAME rego_invalid_input COMMAND rego -i bad.json data WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_interpreter>)
 add_test(NAME rego_invalid_large COMMAND rego -d rego data WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_interpreter>)
+add_test(NAME rego_test_manual COMMAND rego_test -n manual WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_interpreter>)
 add_test(NAME rego_test_regocpp COMMAND rego_test regocpp.yaml -wf WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
 add_test(NAME rego_test_bugs COMMAND rego_test bugs.yaml -wf WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
 add_test(NAME rego_test_v1 COMMAND rego_test regov1.yaml -wf WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)

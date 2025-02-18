@@ -13,8 +13,18 @@ namespace
 
   Node to_data(Node node)
   {
-    if (node->in({Scalar, DataTerm}))
+    if (node->type() == DataTerm)
     {
+      return node;
+    }
+
+    if (node->type() == Scalar)
+    {
+      if (node->front()->type() == JSONString)
+      {
+        return (Scalar << (String << (JSONString ^ node->front())));
+      }
+
       return node;
     }
 
@@ -38,9 +48,13 @@ namespace
       Nodes children;
       for (auto& child : *node)
       {
+        if (child->size() != 2)
+        {
+          children.push_back(err(child, "Invalid object item"));
+        }
+
         children.push_back(
-          DataObjectItem << (Key << to_data(child / Key))
-                         << (Val << to_data(child / Val)));
+          DataObjectItem << to_data(child->front()) << to_data(child->back()));
       }
       return DataObject << children;
     }
@@ -201,17 +215,38 @@ namespace rego
 
   Node Interpreter::add_data(const Node& node)
   {
-    logging::Info() << "Adding data from JSON AST";
-    std::string debug = "data" + std::to_string(m_data_count++);
-    auto result = node >> m_from_json.debug_path(m_debug_path / debug);
-    if (!result.ok)
+    Node data_node;
+    if (node->type() == json::Object)
     {
-      logging::Error err;
-      result.print_errors(err);
-      return ErrorSeq << result.errors;
+      logging::Info() << "Adding data from JSON AST";
+      std::string debug = "data" + std::to_string(m_data_count++);
+      auto result =
+        (Top << node) >> m_from_json.debug_path(m_debug_path / debug);
+      if (!result.ok)
+      {
+        logging::Error err;
+        result.print_errors(err);
+        return ErrorSeq << result.errors;
+      }
+
+      data_node = result.ast->front();
+    }
+    else if (node->in({Term, Object, Array, Set, Scalar}))
+    {
+      logging::Info() << "Adding data from AST";
+      data_node = to_data(Resolver::to_term(node));
+    }
+    else
+    {
+      data_node = node;
     }
 
-    merge(Data << result.ast->front());
+    if (data_node->type() != DataTerm)
+    {
+      return ErrorSeq << err(data_node, "Invalid data");
+    }
+
+    merge(Data << data_node);
     return nullptr;
   }
 
@@ -269,8 +304,44 @@ namespace rego
 
   Node Interpreter::set_input(const Node& node)
   {
-    logging::Info() << "Setting input AST";
-    merge(Input << to_data(node));
+    Node data_node;
+    if (node->in(
+          {json::Object,
+           json::Array,
+           json::String,
+           json::Number,
+           json::True,
+           json::False,
+           json::Null}))
+    {
+      logging::Info() << "Setting input from JSON AST";
+      auto result =
+        (Top << node) >> m_from_json.debug_path(m_debug_path / "input");
+      if (!result.ok)
+      {
+        logging::Error err;
+        result.print_errors(err);
+        return ErrorSeq << result.errors;
+      }
+
+      data_node = result.ast->front();
+    }
+    else if (node->in({Term, Object, Array, Set, Scalar}))
+    {
+      logging::Info() << "Setting input from AST";
+      data_node = to_data(Resolver::to_term(node));
+    }
+    else
+    {
+      data_node = node;
+    }
+
+    if (data_node->type() != DataTerm)
+    {
+      return ErrorSeq << err(data_node, "Invalid input");
+    }
+
+    merge(Input << data_node);
     return nullptr;
   }
 
