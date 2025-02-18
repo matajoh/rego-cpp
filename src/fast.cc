@@ -32,7 +32,7 @@ namespace
         node = node->front();
       }
 
-      if (node->type() == Scalar)
+      if (node->in({Undefined, Scalar}))
       {
         continue;
       }
