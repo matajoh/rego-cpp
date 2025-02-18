@@ -530,22 +530,17 @@ namespace rego
 
   Node Resolver::to_term(const Node& value)
   {
-    if (value == Term || value == TermSet)
+    if (value->in({Term, TermSet}))
     {
       return value->clone();
     }
 
-    if (
-      value == Array || value == DynamicSet || value == Set ||
-      value == DynamicObject || value == Object || value == Scalar)
+    if (value->in({Array, DynamicSet, Set, DynamicObject, Object, Scalar}))
     {
       return Term << value->clone();
     }
 
-    if (
-      value->type() == Int || value->type() == Float ||
-      value->type() == JSONString || value->type() == True ||
-      value->type() == False || value->type() == Null)
+    if (value->in({Int, Float, JSONString, True, False, Null}))
     {
       return Term << (Scalar << value->clone());
     }

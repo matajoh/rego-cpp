@@ -224,7 +224,7 @@ namespace rego_test
     {
       assert(defs[0] == json::Member);
       Node val = defs[0] / json::Value;
-      return Top << val;
+      return val;
     }
 
     return std::nullopt;
@@ -575,15 +575,15 @@ namespace rego_test
       }
 
       auto data = maybe_get_object(test_case_obj, "data");
-      if (data.has_value() && (*data)->front() == json::Object)
+      if (data.has_value() && data.value()->type() == json::Object)
       {
-        test_case = test_case.data(*data);
+        test_case = test_case.data(data.value());
       }
 
       auto input = maybe_get_object(test_case_obj, "input");
       if (input.has_value())
       {
-        test_case = test_case.input(*input);
+        test_case = test_case.input(input.value());
       }
 
       test_case.filename(filename)
