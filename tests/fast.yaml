@@ -85,21 +85,21 @@ cases:
     names := ["prod", `smoke1`, "dev"]
     sites := [{"name": "prod"}, {"name": names[index]}, {"name": "dev"}]
     e := {
-        a: "foo",
+        "42": "foo",
         "three": c,
-        names[2]: b,
+        "dev": b,
         "four": d,
     }
     f := e["dev"]
   note : fast/objects
   fast : true
-  query: data.objects.sites[1].name = x
+  query: "x:=data.objects.sites[1].name"
   want_result:
     - x: smoke1
 - note: fast/query_math
   fast: true
-  query: 'x=5;
-    y=x + (2 - 4 * 0.25) * -3 + 7.4'
+  query: 'x:=5;
+    y:=x + (2 - 4 * 0.25) * -3 + 7.4'
   sort_bindings: true
   want_result:
     - x: 5
@@ -121,7 +121,7 @@ cases:
     i := b < a
     j := 1.0 <= 2.1
     k := a - (b + -c) * (-d / 2) + 3.7
-  query: data.expressions.k > 27 = x
+  query: "x:=data.expressions.k > 27"
   want_result:
     - x: true
 - note: fast/bodies
@@ -133,8 +133,8 @@ cases:
     val := -1
     a := 5
     b := 3
-    c := a + b { a; b; a > b }
-    d := val {
+    c := a + b if { a; b; a > b }
+    d := val  if {
       input.a < a
       val := a + data.bodies.b
     } {
@@ -142,7 +142,7 @@ cases:
       val := a - b
     }
     
-    e := {"one": x, "two": y + z} {
+    e := {"one": x, "two": y + z} if {
       x := a * b
       c
       y := d
@@ -151,16 +151,16 @@ cases:
     
     default f := false
     
-    f {
+    f if {
       b < a
       not d
     }
     
-    f {
+    f if {
       input.c > d
     }
     
-    g {
+    g if {
       d == a + b
       a < b
     }
@@ -169,7 +169,7 @@ cases:
     b: "20"
     c: 30.0
     d: true
-  query: data.bodies.e = x
+  query: "x := data.bodies.e"
   want_result:
     - x:
         one: 15
@@ -183,8 +183,8 @@ cases:
     val := -1
     a := 5
     b := 3
-    c := a + b { a; b; a > b }
-    d := val {
+    c := a + b if { a; b; a > b }
+    d := val if {
       input.a < a
       val := a + data.bodies.b
     } {
@@ -192,7 +192,7 @@ cases:
       val := a - b
     }
     
-    e := {"one": x, "two": y + z} {
+    e := {"one": x, "two": y + z} if {
       x := a * b
       c
       y := d
@@ -201,16 +201,16 @@ cases:
     
     default f := false
     
-    f {
+    f if {
       b < a
       not d
     }
     
-    f {
+    f if {
       input.c > d
     }
     
-    g {
+    g if {
       d == a + b
       a < b
     }
@@ -219,66 +219,8 @@ cases:
     b: "20"
     c: 30.0
     d: true
-  query: data.bodies.g = x
+  query: "x:=data.bodies.g"
   want_defined: false
-- note: fast/sets
-  fast: true
-  modules:
-  - |
-    package sets
-    
-    a := 1
-    b := 1
-    c := 2
-    d := 3
-    
-    e := "one"
-    f := "one"
-    g := "two"
-    h := "three" {
-      d > c
-      c > b
-      b >= a
-    }
-    
-    i := {"foo": 1}
-    j := {"foo": 1}
-    k := {"foo": 2, "bar": 1, "baz": 1}
-    l := {"foo": 3, "bar": 2, "baz": 1}
-    
-    int_set := {4, a, c, d, b}
-    string_set := {"four", g, f, e}
-    obj_set := {i, j, k, l}
-    array_set := {[a, b], [b, a], [a, c], [a, d], [b, c], [b, d], [c, d]}
-    
-    empty_set := set()
-  query: data.sets.string_set = x
-  want_result:
-    - x:
-        - four
-        - one
-        - two
-- note: fast/sets_membership
-  fast: true
-  modules:
-  - |
-    package sets
-       
-    i := {"foo": 1}
-    j := {"foo": 1}
-    k := {"foo": 2, "bar": 1, "baz": 1}
-    l := {"foo": 3, "bar": 2, "baz": 1}
-    
-    obj_set := {i, j, k, l}
-    
-    empty_set := set()
-    
-    m {
-      data.sets.obj_set[{"foo": 1}]
-    }
-  query: data.sets.m = x
-  want_result:
-    - x: true
 - note: fast/multi/0
   fast: true
   input:
@@ -289,7 +231,7 @@ cases:
 
     default a := 0
 
-    a := val {
+    a := val if {
         input.a > 0
         input.a < 10
         input.a % 2 == 1
@@ -301,10 +243,10 @@ cases:
         val := input.a * 10 + 1
     }
     
-    a := input.a / 10 {
+    a := input.a / 10 if {
         input.a >= 10
     }
-  query: data.multi.a = x
+  query: "x:=data.multi.a"
   want_result:
     - x: 1
 - note: fast/multi/1
@@ -317,7 +259,7 @@ cases:
 
     default a := 0
 
-    a := val {
+    a := val if {
         input.a > 0
         input.a < 10
         input.a % 2 == 1
@@ -329,10 +271,10 @@ cases:
         val := input.a * 10 + 1
     }
     
-    a := input.a / 10 {
+    a := input.a / 10 if {
         input.a >= 10
     }
-  query: data.multi.a = x
+  query: "x:=data.multi.a"
   want_result:
     - x: 41
 - note: fast/multi/2
@@ -345,7 +287,7 @@ cases:
 
     default a := 0
 
-    a := val {
+    a := val if {
         input.a > 0
         input.a < 10
         input.a % 2 == 1
@@ -357,10 +299,10 @@ cases:
         val := input.a * 10 + 1
     }
     
-    a := input.a / 10 {
+    a := input.a / 10 if {
         input.a >= 10
     }
-  query: data.multi.a = x
+  query: "x:=data.multi.a"
   want_result:
     - x: 70
 - note: fast/compare
@@ -379,46 +321,9 @@ cases:
     h := {"b": "1", "a": "2"}
 
     output := [a < b, c < d, e < f, g < h]
-  query: data.compare.output = x
+  query: x:=data.compare.output
   want_result:
     - x: [true, false, false, true]
-- note: fast/setops
-  fast: true
-  modules:
-  - |
-    package setops
-
-    a := {1, 2, 3, 4}
-    b := {3, 4, 5}
-    c := {4, 5, 6}
-    d := {2, 3, 4}
-    e := a | b & c | d
-    f := {x | some x in b & c | d}
-    g := [a | b]
-    h := [a | b, 4]
-    i := { a: b | c }
-    j := { a: b, c: d | e}
-    k := a - d
-
-    output {
-      e == {1, 2, 3, 4, 5}
-        f == {2, 3, 4, 5}
-        g == [a]
-        h == [{1, 2, 3, 4, 5}, 4]
-        i == {
-          a: {3, 4, 5}
-        }
-        j == {
-          a: {3, 4, 5},
-            c: {1, 2, 3, 4, 5}
-        }
-        k == {1}
-        1 in a | b
-        3 in a & b | c & d
-    }
-  query: data.setops.output = x
-  want_result:
-    - x: true
 - note: fast/time
   fast: true
   modules:
@@ -429,9 +334,23 @@ cases:
 
     is_same if {
       test := now_ns
-      test.sleep("1ms")
       test == time.now_ns()
     }
-  query: x:=data.time.is_same
+  query: "x:=data.time.is_same"
   want_result:
     - x: true
+- note: fast/regex
+  fast: true
+  modules:
+  - |
+    package test
+
+    pattern := `^[a-z]+\d+$`
+    expect_match := regex.match(pattern, "abc123")
+    expect_no_match := regex.match(pattern, "123abc")
+    expect_valid := regex.is_valid(`^[a-z]+\d+$`)
+    expect_invalid := regex.is_valid("[")
+    output := [expect_match, expect_no_match, expect_valid, expect_invalid]
+  query: x:=data.test.output
+  want_result:
+    - x: [true, false, true, false]

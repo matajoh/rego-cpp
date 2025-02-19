@@ -199,6 +199,7 @@ namespace rego
     | (NotExpr <<= Expr)
     | (Expr <<= (Term | ExprCall | ExprInfix | ExprParens | UnaryExpr))
     | (ExprCall <<= Ref * ExprSeq)
+    | (ExprSeq <<= Expr++)
     | (ExprInfix <<= Expr * InfixOperator * Expr)
     | (ExprParens <<= Expr)
     | (UnaryExpr <<= Expr)
