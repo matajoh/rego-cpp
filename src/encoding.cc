@@ -1,3 +1,4 @@
+#include "fast.hh"
 #include "trieste/json.h"
 #include "unify.hh"
 
@@ -154,7 +155,7 @@ namespace rego
     {
       buf << '"' << node->location().view() << '"';
     }
-    else if (node->type() == Array || node->type() == DataArray)
+    else if (node->in({Array, DataArray}))
     {
       std::vector<std::string> items;
       if (sort_arrays)
@@ -191,8 +192,7 @@ namespace rego
         });
       buf << "]";
     }
-    else if (
-      node->type() == Set || node->type() == DataSet || node == DynamicSet)
+    else if (node->in({Set, DataSet, DynamicSet}))
     {
       std::vector<NodeKey> node_keys;
       for (const auto& child : *node)
@@ -231,9 +231,7 @@ namespace rego
         buf << ">";
       }
     }
-    else if (
-      node == Object || node == DataObject || node == DynamicObject ||
-      node == Bindings)
+    else if (node->in({Object, DataObject, DynamicObject, Bindings, FastObject, FastDataObject}))
     {
       std::map<std::string, std::string> items;
       for (const auto& child : *node)
@@ -260,9 +258,7 @@ namespace rego
         });
       buf << "}";
     }
-    else if (
-      node->type() == Scalar || node->type() == Term ||
-      node->type() == DataTerm)
+    else if (node->in({Scalar, Term, DataTerm}))
     {
       return to_key(node->front(), set_as_array, sort_arrays);
     }

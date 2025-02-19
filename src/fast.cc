@@ -1,9 +1,11 @@
 #include "fast.hh"
 
 #include "internal.hh"
+#include "re2/re2.h"
 #include "rego.hh"
 #include "trieste/json.h"
 #include "trieste/logging.h"
+#include "trieste/rewrite.h"
 
 #include <chrono>
 #include <optional>
@@ -43,7 +45,7 @@ namespace
         return false;
       }
 
-      if (node->in({Array, Set}))
+      if (node->type() == Array)
       {
         stack.insert(stack.end(), node->begin(), node->end());
       }
@@ -84,9 +86,11 @@ namespace
 
   Node resolve_rule(Nodes values)
   {
+    logging::Debug() << "resolving rule";
     Nodes best_terms;
     std::size_t rank = std::numeric_limits<std::uint16_t>::max();
     BigInt best_index(rank);
+
     for (auto& value : values)
     {
       Node rule_body = value / FastBody;
@@ -94,6 +98,7 @@ namespace
       Node rule_index = value / Idx;
       if (rule_body->type() == FastBody)
       {
+        logging::Debug() << "rule body is unresolved";
         return nullptr;
       }
 
@@ -105,15 +110,26 @@ namespace
       BigInt index = BigInt(rule_index->location());
       if (rule_body->type() == True)
       {
-        if (index == best_index)
+        if (is_undefined(rule_value))
         {
-          best_terms.push_back(rule_value);
+          if (best_terms.empty())
+          {
+            best_terms.push_back(rule_value);
+            best_index = index;
+          }
         }
-        else if (index < best_index)
+        else
         {
-          best_terms.clear();
-          best_terms.push_back(rule_value);
-          best_index = index;
+          if (index == best_index)
+          {
+            best_terms.push_back(rule_value);
+          }
+          else if (index < best_index)
+          {
+            best_terms.clear();
+            best_terms.push_back(rule_value);
+            best_index = index;
+          }
         }
       }
     }
@@ -150,10 +166,17 @@ namespace
     }
     else if (nodes.size() > 1)
     {
+      logging::Debug() << "Multiple nodes found: " << nodes.size();
       return std::nullopt;
     }
 
-    if (node->in({FastDataObjectItem, FastObjectItem, Input, FastDataModule}))
+    if (node->in(
+          {FastDataObjectItem,
+           FastObjectItem,
+           Input,
+           FastDataModule,
+           Binding,
+           FastLocal}))
     {
       node = node / Val;
     }
@@ -300,6 +323,7 @@ namespace
     auto maybe_head = get_head(nodes);
     if (!maybe_head.has_value())
     {
+      logging::Debug() << "Cannot resolve head";
       return nullptr;
     }
 
@@ -417,8 +441,62 @@ namespace
               return FastRule << _(Id) << body << val << (Int ^ "0");
             }
 
-            return err(
-              _(RuleBodySeq), "Only one rule body is supported in fast rego");
+            // Else precedence is per rule chain. This means that
+            // each set of else sequences must be evaluated individually
+            // and resolve to a value (or undefined). This is to deal
+            // with rules of the following kind:
+            //   conflict_1 {
+            //     false
+            //   } else = true {
+            //     true
+            //   }
+            //
+            //   conflict_1 = false
+            //
+            // In this case, conflict_1 will resolve to two (conflicting)
+            // values. This is why we have to create a proxy rule below.
+            // Do NOT optimise this away.
+            Node rule_seq = NodeDef::create(Seq);
+
+            // first we create all the variants of the rule
+            Node rule_id = Var ^ _.fresh(_(Id)->location());
+            for (std::size_t i = 0; i < num_items; ++i)
+            {
+              Node item = _(RuleBodySeq)->at(i);
+              Node body;
+              if (item == Query)
+              {
+                body = FastBody ^ item;
+                body->insert(body->end(), item->begin(), item->end());
+                rule_seq
+                  << (FastRule << rule_id->clone() << body << val->clone()
+                               << (Int ^ std::to_string(i)));
+              }
+              else if (item == Else)
+              {
+                Node item_val = item / Expr;
+                if (is_constant(item_val->front()))
+                {
+                  item_val = item_val->front();
+                }
+
+                Node query = item / Query;
+                body = FastBody ^ query;
+                body->insert(body->end(), query->begin(), query->end());
+
+                rule_seq
+                  << (FastRule << rule_id->clone() << body << item_val
+                               << (Int ^ std::to_string(i)));
+              }
+            }
+
+            // then we create the proxy rule
+            rule_seq
+              << (FastRule << _(Id) << FastBody
+                           << (Expr << (Term << (Var ^ rule_id)))
+                           << (Int ^ "0"));
+
+            return rule_seq;
           },
 
         In(Policy) *
@@ -461,6 +539,23 @@ namespace
           [](Match& _) {
             ACTION();
             return (FastRegexMatch ^ _(RefHead)) << _(Lhs) << _(Rhs);
+          },
+
+        In(Expr) *
+            (T(ExprCall)
+             << ((T(Ref)
+                  << ((T(RefHead)[RefHead] << T(Var, "regex")) *
+                      (T(RefArgSeq) << (T(RefArgDot) << T(Var, "is_valid"))))) *
+                 (T(ExprSeq) << (T(Expr)[Lhs])))) >>
+          [](Match& _) {
+            ACTION();
+            return (FastRegexIsValid ^ _(RefHead)) << _(Lhs);
+          },
+
+        T(ExprParens) << T(Expr)[Expr] >>
+          [](Match& _) {
+            ACTION();
+            return _(Expr)->front();
           },
 
         T(Object)[Object] >>
@@ -532,8 +627,8 @@ namespace
       dir::bottomup,
       {
         T(Expr)
-            << (T(Term)[Term] << T(
-                  Scalar, Array, FastObject, FastDataObject, Set, Undefined)) >>
+            << (T(Term)[Term]
+                << T(Scalar, Array, FastObject, FastDataObject, Undefined)) >>
           [](Match& _) {
             ACTION();
             return _(Term);
@@ -570,6 +665,40 @@ namespace
             }
 
             return time;
+          },
+
+        In(Expr) *
+            (T(FastRegexIsValid)
+             << ((T(Term) << (T(Scalar) << T(JSONString)[Pattern])))) >>
+          [](Match& _) {
+            ACTION();
+            std::string pattern(_(Pattern)->location().view());
+            re2::RE2 re(pattern);
+            if (re.ok())
+            {
+              return Term << (Scalar << (True ^ "true"));
+            }
+
+            return Term << (Scalar << (False ^ "false"));
+          },
+
+        In(Expr) *
+            (T(FastRegexMatch)
+             << (((T(Term) << (T(Scalar) << T(JSONString)[Pattern]))) *
+                 ((T(Term) << (T(Scalar) << T(JSONString)[Val]))))) >>
+          [](Match& _) {
+            ACTION();
+            std::string pattern(_(Pattern)->location().view());
+            std::string value(_(Val)->location().view());
+            pattern = strip_quotes(json::unescape(pattern));
+            value = strip_quotes(json::unescape(value));
+            re2::RE2 re(pattern);
+            if (re.ok() && RE2::FullMatch(value, re))
+            {
+              return Term << (Scalar << (True ^ "true"));
+            }
+
+            return Term << (Scalar << (False ^ "false"));
           },
 
         In(Term) * T(Var)[Var] >> [](Match& _) -> Node {
@@ -625,13 +754,20 @@ namespace
               << (Scalar << Resolver::bininfix(_(Op)->front(), _(Lhs), _(Rhs)));
           },
 
+        In(Expr) * (T(UnaryExpr) << T(Term)[Term]) >>
+          [](Match& _) {
+            ACTION();
+            return Term << (Scalar << Resolver::unary(_(Term)));
+          },
+
         In(RefArgBrack) * (T(Term) << (T(Scalar) << T(Int, JSONString)[Key])) >>
           [](Match& _) {
             ACTION();
             return _(Key);
           },
 
-        In(FastRule) * (T(FastBody)[FastBody] << (T(Term, Binding)++ * End)) >>
+        In(FastRule) *
+            (T(FastBody)[FastBody] << (T(Term, FastLocal)++ * End)) >>
           [](Match& _) {
             ACTION();
             for (auto& node : *_(FastBody))
@@ -815,30 +951,6 @@ namespace
           [](Match& _) {
             ACTION();
             return Object << *_[Object];
-          },
-
-        (T(Array) / T(Set)) * T(Error)[Error] >>
-          [](Match& _) {
-            ACTION();
-            return _(Error);
-          },
-
-        T(Object) * (T(ObjectItem) << (T(Key) * T(Error)[Error])) >>
-          [](Match& _) {
-            ACTION();
-            return _(Error);
-          },
-
-        T(Scalar) * T(Error)[Error] >>
-          [](Match& _) {
-            ACTION();
-            return _(Error);
-          },
-
-        T(Term) * T(Error)[Error] >>
-          [](Match& _) {
-            ACTION();
-            return _(Error);
           },
       }};
   }
