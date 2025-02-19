@@ -374,11 +374,16 @@ namespace
           },
 
         In(DataSeq) *
-            (T(Data) << (T(DataTerm) << T(FastDataObject)[FastDataObject])) >>
+            (T(Data) << (T(DataTerm)[DataTerm])) >>
           [](Match& _) {
             ACTION();
+            if(_(DataTerm)->front()->type() != FastDataObject){
+              return err(_(DataTerm), "Data must be an object", RegoTypeError);
+            }
+
+            Node obj = _(DataTerm)->front();
             Node seq = NodeDef::create(Seq);
-            for (auto& item : *_(FastDataObject))
+            for (auto& item : *obj)
             {
               auto key = item / Key;
               auto val = item / Val;
@@ -615,6 +620,23 @@ namespace
             ACTION();
             return _(JSONString);
           },
+
+        // errors
+
+        In(DataObjectItem) * (T(DataTerm)[Key] * T(DataTerm)) >>
+          [](Match& _) -> Node{
+            ACTION();
+            if(_(Key)->front()->type() != Scalar){
+              return err(_(Key), "Invalid object key", RegoTypeError);
+            }
+
+            Node key = _(Key)->front()->front();
+            if(key->type() != JSONString){
+              return err(key, "Invalid object key", RegoTypeError);
+            }
+
+            return NoChange;
+          }
       }};
   }
 
@@ -672,7 +694,7 @@ namespace
              << ((T(Term) << (T(Scalar) << T(JSONString)[Pattern])))) >>
           [](Match& _) {
             ACTION();
-            std::string pattern(_(Pattern)->location().view());
+            std::string pattern = strip_quotes(json::unescape(_(Pattern)->location().view()));
             re2::RE2 re(pattern);
             if (re.ok())
             {
@@ -688,10 +710,8 @@ namespace
                  ((T(Term) << (T(Scalar) << T(JSONString)[Val]))))) >>
           [](Match& _) {
             ACTION();
-            std::string pattern(_(Pattern)->location().view());
-            std::string value(_(Val)->location().view());
-            pattern = strip_quotes(json::unescape(pattern));
-            value = strip_quotes(json::unescape(value));
+            std::string pattern = strip_quotes(json::unescape(_(Pattern)->location().view()));
+            std::string value = strip_quotes(json::unescape(_(Val)->location().view()));
             re2::RE2 re(pattern);
             if (re.ok() && RE2::FullMatch(value, re))
             {

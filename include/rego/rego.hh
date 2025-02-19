@@ -203,7 +203,7 @@ namespace rego
     | (ExprInfix <<= Expr * InfixOperator * Expr)
     | (ExprParens <<= Expr)
     | (UnaryExpr <<= Expr)
-    | (Term <<= Ref | Var | Scalar | Array | Object | Set)
+    | (Term <<= Ref | Var | Scalar | Array | Object)
     | (InfixOperator <<= AssignOperator | BoolOperator | ArithOperator | BinOperator)
     | (BoolOperator <<= Equals | NotEquals | LessThan | GreaterThan | LessThanOrEquals | GreaterThanOrEquals)
     | (ArithOperator <<= Add | Subtract | Multiply | Divide | Modulo)

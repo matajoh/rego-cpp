@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 
   std::string transform;
   app.add_option("transform", transform, "Transform to test")
-    ->check(CLI::IsMember({"reader", "unify"}))
+    ->check(CLI::IsMember({"reader", "unify", "fast"}))
     ->required(true);
 
   uint32_t seed = std::random_device()();
@@ -58,6 +58,10 @@ int main(int argc, char** argv)
   {
     auto builtins = rego::BuiltInsDef::create();
     fuzzer = Fuzzer(rego::unify(builtins), reader.parser().generators());
+  }
+  else if(transform == "fast")
+  {
+    fuzzer = Fuzzer(rego::fast(), reader.parser().generators());
   }
 
   return fuzzer.start_seed(seed).seed_count(count).failfast(failfast).test();
