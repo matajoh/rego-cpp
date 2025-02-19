@@ -11,6 +11,7 @@ target_link_libraries(rego_test_c_api
 if(REGOCPP_BUILD_TOOLS)
   add_test(NAME rego_fuzzer_reader COMMAND rego_fuzzer reader -f WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_fuzzer>)
   add_test(NAME rego_fuzzer_unify COMMAND rego_fuzzer unify -f WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_fuzzer>)
+  add_test(NAME rego_fuzzer_fast COMMAND rego_fuzzer fast -f WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_fuzzer>)
 endif()
 
 add_test(NAME rego_invalid_input COMMAND rego -i bad.json data WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_interpreter>)
