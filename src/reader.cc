@@ -217,7 +217,7 @@ namespace
     ;
   // clang-format on
 
-  PassDef keywords(bool v1_compatible)
+  PassDef keywords(bool v0_compatible)
   {
     std::shared_ptr<std::map<std::string, Token>> keywords =
       std::make_shared<std::map<std::string, Token>>();
@@ -322,8 +322,8 @@ namespace
           },
       }};
 
-    pass.pre(Module, [v1_compatible, keywords](Node module) {
-      if (v1_compatible)
+    pass.pre(Module, [v0_compatible, keywords](Node module) {
+      if (!v0_compatible)
       {
         Nodes nodes;
         keywords->insert({"if", If});
@@ -1775,12 +1775,12 @@ namespace
 
 namespace rego
 {
-  Reader reader(bool v1_compatible)
+  Reader reader(bool v0_compatible)
   {
     return {
       "rego",
       {
-        prep(),           keywords(v1_compatible),
+        prep(),           keywords(v0_compatible),
         some_every(),     ref_args(),
         refs(),           groups(),
         terms(),          unary(),

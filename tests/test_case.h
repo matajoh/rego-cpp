@@ -28,7 +28,7 @@ namespace rego_test
     Result run(
       const std::filesystem::path& debug_path,
       bool wf_checks,
-      bool v1_compatible) const;
+      bool v0_compatible) const;
 
     /** name of the test case category. */
     const std::string& category() const;

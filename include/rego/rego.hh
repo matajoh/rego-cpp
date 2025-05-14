@@ -909,9 +909,9 @@ namespace rego
     /**
      * Constructor.
      *
-     * @param v1_compatible whether the Interpreter should run in rego-v1 mode.
+     * @param v0_compatible whether the Interpreter should run in rego-v0 mode.
      */
-    Interpreter(bool v1_compatible = false);
+    Interpreter(bool v0_compatible = false);
 
     /**
      * Adds a module (i.e. virtual document) file to the interpreter.
@@ -1113,7 +1113,7 @@ namespace rego
   /**
    * Parses Rego queries and virtual documents.
    */
-  Reader reader(bool v1_compatible = false);
+  Reader reader(bool v0_compatible = false);
 
   /**
    * Rewrites a Query AST to an input term.

@@ -67,9 +67,9 @@ int main(int argc, char** argv)
       "None")
     ->check(rego::set_log_level_from_string);
 
-  bool v1_compatible{false};
+  bool v0_compatible{false};
   app.add_flag(
-    "-1,--v1-compatible", v1_compatible, "Use Rego v1 compatibility mode");
+    "-1,--v0-compatible", v0_compatible, "opt-in to OPA features and behaviors prior to the OPA v1.0 release");
 
   bool fast{false};
   app.add_flag("-f,--fast", fast, "Use fast query mode");
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
   std::shared_ptr<rego::Interpreter> interpreter;
   {
     Timer timer("Interpreter creation", timing);
-    interpreter = std::make_shared<rego::Interpreter>(v1_compatible || fast);
+    interpreter = std::make_shared<rego::Interpreter>(!v0_compatible || fast);
   }
 
   interpreter->wf_check_enabled(wf_checks);

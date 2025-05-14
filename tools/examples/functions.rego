@@ -1,30 +1,30 @@
 package functions
 
-f(a, b, c) := sum {
+f(a, b, c) := sum if {
 	b != -1
     g(input.key)
     sum := a + b + c
 }
 
-f(a, -1, c) := sum {
+f(a, -1, c) := sum if {
     g(input.key)
     sum := a + c
 }
 
-f(a, b, c) := prod {
+f(a, b, c) := prod if {
     not g(input.key)
     prod := a * b * c
 }
 
-g("sum") {
+g("sum") if {
     true
 }
 
-g("prod") {
+g("prod") if {
     false
 }
 
-h(a, b) := result {
+h(a, b) := result if {
     result := {
         "a": a,
         "b": b

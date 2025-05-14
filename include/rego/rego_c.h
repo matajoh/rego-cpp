@@ -136,13 +136,13 @@ extern "C"
   REGO_API(regoInterpreter*) regoNew(void);
 
   /**
-   * Allocates and initializes a new V1 Rego interpreter.
+   * Allocates and initializes a new V0 Rego interpreter.
    *
    * The caller is responsible for freeing the interpreter with regoFree.
    *
-   * @return A pointer to the new V1 interpreter.
+   * @return A pointer to the new V0 interpreter.
    */
-  REGO_API(regoInterpreter*) regoNewV1(void);
+  REGO_API(regoInterpreter*) regoNewV0(void);
 
   /**
    * Frees a Rego interpreter.

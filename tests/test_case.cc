@@ -665,9 +665,9 @@ namespace rego_test
   Result TestCase::run(
     const std::filesystem::path& debug_path,
     bool wf_checks,
-    bool v1_compatible) const
+    bool v0_compatible) const
   {
-    rego::Interpreter interpreter(v1_compatible | m_fast);
+    rego::Interpreter interpreter(!v0_compatible | m_fast);
     interpreter.builtins().strict_errors(m_strict_error);
     interpreter.builtins().register_builtin(
       BuiltInDef::create(Location("test.sleep"), 1, test_sleep));
