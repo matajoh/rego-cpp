@@ -73,7 +73,7 @@ public partial class Interpreter
   private static partial RegoHandle regoNew();
 
   [LibraryImport("rego_shared")]
-  private static partial RegoHandle regoNewV1();
+  private static partial RegoHandle regoNewV0();
 
   [LibraryImport("rego_shared", StringMarshalling = StringMarshalling.Utf8)]
   private static partial RegoOutputHandle regoQuery(RegoHandle ptr, string query);
@@ -123,10 +123,10 @@ public partial class Interpreter
 
   private readonly RegoHandle m_handle;
 
-  public Interpreter(bool v1_compatible)
+  public Interpreter(bool v0_compatible)
   {
-    if (v1_compatible)
-      m_handle = regoNewV1();
+    if (v0_compatible)
+      m_handle = regoNewV0();
     else
       m_handle = regoNew();
   }

@@ -6,7 +6,7 @@ from typing import Any
 from .output import Output
 from .rego_shared import (
     rego_new,
-    rego_new_v1,
+    rego_new_v0,
     rego_add_module,
     rego_add_data_json,
     rego_set_input_term,
@@ -92,9 +92,9 @@ class Interpreter:
         {"bindings":{"x":[{"bar":"Foo", "baz":5, "be":true, "bop":23.4}, "20", {"name":"smoke1"}]}}
     """
 
-    def __init__(self, v1_compatible=False):
+    def __init__(self, v0_compatible=False):
         """Initializer."""
-        self._impl = rego_new_v1() if v1_compatible else rego_new()
+        self._impl = rego_new_v0() if v0_compatible else rego_new()
 
     def __del__(self):
         """Destructor."""

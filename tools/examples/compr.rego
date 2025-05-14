@@ -19,7 +19,7 @@ app_to_hostnames := {app.name: hostnames |
 a := [1, 2, 3, 4, 3, 4, 3, 4, 5]
 b := {x | x = a[_]}
 
-output {
+output if {
     names == ["smoke", "dev"]
     app_to_hostnames == {
     	"mongodb": ["oxygen"],

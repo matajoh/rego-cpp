@@ -373,15 +373,15 @@ pub fn set_log_level(level: LogLevel) -> Result<(), &'static str> {
 
 impl Interpreter {
     /// Creates a new Rego interpreter.
-    pub fn new() -> Self {
-        let interpreter_ptr = unsafe { regoNew() };
+    pub fn new_v0() -> Self {
+        let interpreter_ptr = unsafe { regoNewV0() };
         Self {
             c_ptr: interpreter_ptr,
         }
     }
 
-    pub fn new_v1() -> Self {
-        let interpreter_ptr = unsafe { regoNewV1() };
+    pub fn new() -> Self {
+        let interpreter_ptr = unsafe { regoNew() };
         Self {
             c_ptr: interpreter_ptr,
         }

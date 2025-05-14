@@ -127,11 +127,11 @@ int main(int argc, char** argv)
     note_match,
     "Note (or note substring) of specific test to run");
 
-  bool v1_compatible{false};
+  bool v0_compatible{false};
   app.add_flag(
-    "-1,--v1-compatible",
-    v1_compatible,
-    "Run tests in Rego v1 compatibility mode (default: false)");
+    "--v0-compatible",
+    v0_compatible,
+    "opt-in to OPA features and behaviors prior to the OPA v1.0 release");
 
   try
   {
@@ -199,7 +199,7 @@ int main(int argc, char** argv)
       try
       {
         auto start = std::chrono::steady_clock::now();
-        auto result = testcase.run(debug_path, wf_checks, v1_compatible);
+        auto result = testcase.run(debug_path, wf_checks, v0_compatible);
         auto end = std::chrono::steady_clock::now();
         const std::chrono::duration<double> elapsed = end - start;
 

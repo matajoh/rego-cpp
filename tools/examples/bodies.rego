@@ -4,7 +4,7 @@ val := -1
 a := 5
 b := 3
 c := a + b { a; b; a > b }
-d := val {
+d := val if {
 	input.a < a
 	val := a + data.bodies.b
 } {
@@ -12,7 +12,7 @@ d := val {
 	val := a - b
 }
 
-e := {"one": x, "two": y + z} {
+e := {"one": x, "two": y + z} if {
 	x := a * b
 	c
 	y := d
@@ -21,16 +21,16 @@ e := {"one": x, "two": y + z} {
 
 default f := false
 
-f {
+f if {
 	b < a
 	not d
 }
 
-f {
+f if {
 	input.c > d
 }
 
-g {
+g if {
 	d == a + b
 	a < b
 }

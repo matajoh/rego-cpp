@@ -112,10 +112,10 @@ extern "C"
     return ptr;
   }
 
-  regoInterpreter* regoNewV1()
+  regoInterpreter* regoNewV0()
   {
     auto ptr = reinterpret_cast<regoInterpreter*>(new rego::Interpreter(true));
-    logging::Debug() << "regoNewV1: " << ptr;
+    logging::Debug() << "regoNewV0: " << ptr;
     return ptr;
   }
 

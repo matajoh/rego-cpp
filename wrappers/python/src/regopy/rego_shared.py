@@ -128,9 +128,9 @@ rego.regoNew.argtypes = []
 rego_new = rego.regoNew
 
 
-rego.regoNewV1.restype = ctypes.c_void_p
-rego.regoNewV1.argtypes = [ctypes.c_char_p]
-rego_new_v1 = rego.regoNewV1
+rego.regoNewV0.restype = ctypes.c_void_p
+rego.regoNewV0.argtypes = [ctypes.c_char_p]
+rego_new_v0 = rego.regoNewV0
 
 
 rego.regoFree.restype = None

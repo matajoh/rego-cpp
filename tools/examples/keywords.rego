@@ -43,7 +43,7 @@ e contains a * b if input.key == "prod"
 f["a"] := a
 f["b"] := b
 f["c"] if c
-f["sum"] := sum {
+f["sum"] := sum if {
     input.a > a
     sum := a + b
 } {

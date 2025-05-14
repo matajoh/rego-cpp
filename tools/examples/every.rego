@@ -42,7 +42,7 @@ lte_one if {
     not larger_than_one(x)
 }
 
-output {
+output if {
 	names_with_dev
     array_domain
     object_domain
