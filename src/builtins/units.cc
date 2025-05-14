@@ -42,33 +42,6 @@ namespace
     return s;
   }
 
-  int is_number(const Location& loc)
-  {
-    std::set<char> digits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    auto it = loc.view().begin();
-    auto end = loc.view().end();
-    if (*it == '-')
-    {
-      ++it;
-    }
-
-    int num_decimals = 0;
-
-    for (; it != end; ++it)
-    {
-      if (*it == '.')
-      {
-        num_decimals++;
-      }
-      else if (!contains(digits, *it))
-      {
-        return -1;
-      }
-    }
-
-    return num_decimals;
-  }
-
   struct UnitsErrors
   {
     std::string no_amount;
@@ -84,23 +57,54 @@ namespace
       return err(x, errors.no_amount, EvalBuiltInError);
     }
 
-    int num_decimals = is_number(num_str);
-    if (num_decimals == -1)
+    auto it = num_str.begin();
+    auto end = num_str.end();
+    if (*it == '-' || *it == '+')
     {
-      return err(x, errors.no_amount, EvalBuiltInError);
+      ++it;
     }
 
-    if (num_decimals == 0)
+    const std::set<char> digits = {
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+    int num_decimals = 0;
+    int num_exponent = 0;
+
+    for (; it != end; ++it)
     {
-      return Int ^ num_str;
+      if (*it == '.')
+      {
+        num_decimals++;
+      }
+      else if (*it == 'e' || *it == 'E')
+      {
+        num_exponent++;
+        if (it + 1 == end)
+        {
+          return err(x, errors.no_amount, EvalBuiltInError);
+        }
+
+        if (it[1] == '+' || it[1] == '-')
+        {
+          ++it;
+        }
+      }
+      else if (!contains(digits, *it))
+      {
+        return err(x, errors.no_amount, EvalBuiltInError);
+      }
     }
 
-    if (num_decimals == 1)
+    if (num_exponent > 1 || num_decimals > 1)
+    {
+      return err(x, errors.parse, EvalBuiltInError);
+    }
+
+    if (num_decimals == 1 || num_exponent == 1)
     {
       return Float ^ num_str;
     }
 
-    return err(x, errors.parse, EvalBuiltInError);
+    return Int ^ num_str;
   }
 
   Node scale(const Node& num, const BigInt& scale, bool round)

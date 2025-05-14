@@ -115,6 +115,17 @@ namespace
       try
       {
         double float_value = std::stod(number_str);
+  
+        if(std::isnan(float_value))
+        {
+          return err(number, "NAN", EvalTypeError);
+        }
+
+        if(std::isinf(float_value))
+        {
+          return err(number, "INF", EvalTypeError);
+        }
+  
         return Resolver::scalar(float_value);
       }
       catch (const std::invalid_argument&)
