@@ -142,7 +142,7 @@ if(REGOCPP_OPA_TESTS)
     toset
   )
 
-  set( OPA_TEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/../opa/test/cases/testdata )
+  set( OPA_TEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/../opa/v1/test/cases/testdata )
   foreach( TEST_DIR ${OPA_TEST_DIRS})
     add_test(NAME rego_test_${TEST_DIR}_v0
              COMMAND rego_test -wf ${OPA_TEST_ROOT}/v0/${TEST_DIR}/
