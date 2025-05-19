@@ -3,11 +3,19 @@ package bodies
 val := -1
 a := 5
 b := 3
-c := a + b { a; b; a > b }
+
+c := a + b if {
+	a
+	b
+	a > b
+}
+
 d := val if {
 	input.a < a
 	val := a + data.bodies.b
-} {
+}
+
+d := val if {
 	input.a >= data.bodies.a
 	val := a - b
 }

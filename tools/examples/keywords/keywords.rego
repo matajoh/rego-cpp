@@ -1,6 +1,5 @@
 package keywords
 
-import future.keywords
 import data.apps as apps
 import data.sites as sites
 
