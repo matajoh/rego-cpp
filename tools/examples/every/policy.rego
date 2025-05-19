@@ -1,7 +1,5 @@
-package every
+package policy
 
-import future.keywords.every
-import future.keywords.if
 import data.sites as sites
 
 names_with_dev if {
