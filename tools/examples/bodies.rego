@@ -3,24 +3,16 @@ package bodies
 val := -1
 a := 5
 b := 3
-
-c := a + b if {
-	a
-	b
-	a > b
-}
-
-d := val if {
+c := a + b { a; b; a > b }
+d := val {
 	input.a < a
 	val := a + data.bodies.b
-}
-
-d := val if {
+} {
 	input.a >= data.bodies.a
 	val := a - b
 }
 
-e := {"one": x, "two": y + z} if {
+e := {"one": x, "two": y + z} {
 	x := a * b
 	c
 	y := d
@@ -29,16 +21,16 @@ e := {"one": x, "two": y + z} if {
 
 default f := false
 
-f if {
+f {
 	b < a
 	not d
 }
 
-f if {
+f {
 	input.c > d
 }
 
-g if {
+g {
 	d == a + b
 	a < b
 }
