@@ -1,5 +1,7 @@
-package policy
+package every
 
+import future.keywords.every
+import future.keywords.if
 import data.sites as sites
 
 names_with_dev if {
@@ -40,7 +42,7 @@ lte_one if {
     not larger_than_one(x)
 }
 
-output if {
+output {
 	names_with_dev
     array_domain
     object_domain

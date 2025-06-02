@@ -1,5 +1,6 @@
 package keywords
 
+import future.keywords
 import data.apps as apps
 import data.sites as sites
 
@@ -42,7 +43,7 @@ e contains a * b if input.key == "prod"
 f["a"] := a
 f["b"] := b
 f["c"] if c
-f["sum"] := sum if {
+f["sum"] := sum {
     input.a > a
     sum := a + b
 } {

@@ -1,16 +1,16 @@
 package errors
 
-a := 5 if {
+a := 5 {
     b > 2
 }
 
 # recursion error
-b := 3 if {
+b := 3 {
     a == 5
 }
 
 # double assignment
-c := x if {
+c := x {
 	x := 2
     x := 3
 }
