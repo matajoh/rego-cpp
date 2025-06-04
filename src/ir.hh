@@ -1,14 +1,14 @@
 #pragma once
 
-#include "internal.hh"
-#include "rego.hh"
 #include "trieste/token.h"
 #include "trieste/writer.h"
+#include "internal.hh"
 
 namespace rego::ir
 {
   inline const auto Policy = TokenDef("rego-ir-policy");
   inline const auto Static = TokenDef("rego-ir-static", flag::lookup | flag::symtab);
+  inline const auto String = TokenDef("rego-ir-string");
   inline const auto BuiltInFunction = TokenDef("rego-ir-builtinfunction", flag::lookup | flag::symtab);
   inline const auto Name = TokenDef("rego-ir-name", flag::print);
   inline const auto Decl = TokenDef("rego-ir-decl");
@@ -30,7 +30,7 @@ namespace rego::ir
   inline const auto FunctionSeq = TokenDef("rego-ir-functionseq");
   inline const auto BuiltInFunctionSeq = TokenDef("rego-ir-builtinfunctionseq");
   inline const auto StringSeq = TokenDef("rego-ir-stringseq");
-  inline const auto FileSeq = TokenDef("rego-ir-fileseq");
+  inline const auto PathSeq = TokenDef("rego-ir-pathseq");
   inline const auto LocalSeq = TokenDef("rego-ir-localseq");
   inline const auto OperandSeq = TokenDef("rego-ir-operandseq");
   inline const auto Int32Seq = TokenDef("rego-ir-int32seq");
@@ -70,6 +70,10 @@ namespace rego::ir
   inline const auto SetAddStmt = TokenDef("rego-ir-setaddstmt");
   inline const auto WithStmt = TokenDef("rego-ir-withstmt");
 
+  // utility tokens
+  inline const auto Idx = TokenDef("rego-ir-idx", flag::print);
+  inline const auto Value = TokenDef("rego-ir-value", flag::print);
+
   // clang-format off
   inline const auto wf_ir_input =
     rego::wf
@@ -100,12 +104,12 @@ namespace rego::ir
   // clang-format off
   inline const auto wf_ir =
     (Policy <<= Static * PlanSeq * FunctionSeq)
-    | (Static <<= StringSeq * BuiltInFunctionSeq * FileSeq)
+    | (Static <<= StringSeq * BuiltInFunctionSeq * PathSeq)
     | (StringSeq <<= String++)
-    | (String <<= Idx * Val)[Idx]
+    | (String <<= Idx * Value)[Idx]
     | (BuiltInFunctionSeq <<= BuiltInFunction++)
     | (BuiltInFunction <<= Name * Decl)
-    | (FileSeq <<= Path++)
+    | (PathSeq <<= Path++)
     | (PlanSeq <<= Plan++[1])
     | (Plan <<= Name * BlockSeq)
     | (BlockSeq <<= Block++)
@@ -151,7 +155,4 @@ namespace rego::ir
     | (Int32Seq <<= Int32++)
     ;
   // clang-format on
-
-  Reader from_json();
-  Writer to_json();
 }

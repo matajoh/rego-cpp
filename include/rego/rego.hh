@@ -1144,4 +1144,6 @@ namespace rego
    * Executes a query and policy which comply with a subset of the Rego language designed for performance.
    */
   Rewriter fast();
+
+  Rewriter from_ir_json();
 }
