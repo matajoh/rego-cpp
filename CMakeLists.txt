@@ -236,11 +236,12 @@ install(FILES ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 
 if (REGOCPP_BUILD_TOOLS)
-  install(TARGETS rego_interpreter rego_fuzzer RUNTIME)
+  install(TARGETS rego_interpreter rego_fuzzer rego_compiler RUNTIME)
 endif()
 
 if (REGOCPP_COPY_EXAMPLES)
   install(DIRECTORY tools/examples DESTINATION .)
+  install(DIRECTORY tools/ir DESTINATION .)
 endif()
 
 if (REGOCPP_BUILD_TESTS)

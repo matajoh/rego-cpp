@@ -20,6 +20,7 @@ yaml.cc
 reader.cc
 unify.cc
 fast.cc
+ir.cc
 unify/strings.cc
 unify/merge_data.cc
 unify/varrefheads.cc
