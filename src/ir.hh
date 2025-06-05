@@ -4,24 +4,26 @@
 #include "trieste/writer.h"
 #include "internal.hh"
 
+// TODO add semantic concepts like target, source, etc.
+
 namespace rego::ir
 {
   inline const auto Policy = TokenDef("rego-ir-policy");
   inline const auto Static = TokenDef("rego-ir-static", flag::lookup | flag::symtab);
-  inline const auto String = TokenDef("rego-ir-string");
+  inline const auto String = TokenDef("rego-ir-string", flag::print);
   inline const auto BuiltInFunction = TokenDef("rego-ir-builtinfunction", flag::lookup | flag::symtab);
-  inline const auto Name = TokenDef("rego-ir-name", flag::print);
   inline const auto Decl = TokenDef("rego-ir-decl");
   inline const auto Plan = TokenDef("rego-ir-plan", flag::lookup | flag::symtab);
   inline const auto Block = TokenDef("rego-ir-block");
   inline const auto Function = TokenDef("rego-ir-function", flag::lookup | flag::symtab);
   inline const auto File = TokenDef("rego-ir-file");
-  inline const auto Local = TokenDef("rego-ir-local");
-  inline const auto Return = TokenDef("rego-ir-return");
+  inline const auto Local = TokenDef("rego-ir-local", flag::print);
   inline const auto Operand = TokenDef("rego-ir-operand");
   inline const auto Int32 = TokenDef("rego-ir-int32", flag::print);
   inline const auto Int64 = TokenDef("rego-ir-int64", flag::print);
   inline const auto UInt32 = TokenDef("rego-ir-uint32", flag::print);
+  inline const auto StringIndex = TokenDef("rego-ir-stringindex", flag::print);
+  inline const auto Boolean = TokenDef("rego-ir-boolean", flag::print);
   
   // sequences
   inline const auto BlockSeq = TokenDef("rego-ir-blockseq");
@@ -71,12 +73,27 @@ namespace rego::ir
   inline const auto WithStmt = TokenDef("rego-ir-withstmt");
 
   // utility tokens
-  inline const auto Idx = TokenDef("rego-ir-idx", flag::print);
-  inline const auto Value = TokenDef("rego-ir-value", flag::print);
+  inline const auto Key = TokenDef("rego-ir-key");
+  inline const auto Value = TokenDef("rego-ir-value");
+  inline const auto Stmt = TokenDef("rego-ir-stmt");
+  inline const auto Source = TokenDef("rego-ir-source");
+  inline const auto Target = TokenDef("rego-ir-target");
+  inline const auto Func = TokenDef("rego-ir-func");
+  inline const auto Array = TokenDef("rego-ir-array");
+  inline const auto Blocks = TokenDef("rego-ir-blocks");
+  inline const auto Index = TokenDef("rego-ir-index");
+  inline const auto Return = TokenDef("rego-ir-return");
+  inline const auto Args = TokenDef("rego-ir-args");
+  inline const auto Lhs = TokenDef("rego-ir-lhs");
+  inline const auto Rhs = TokenDef("rego-ir-rhs");
+  inline const auto Capacity = TokenDef("rego-ir-capacity");
+  inline const auto Object = TokenDef("rego-ir-object");
+  inline const auto Set = TokenDef("rego-ir-set");
+  inline const auto Name = TokenDef("rego-ir-name");
 
   // clang-format off
   inline const auto wf_ir_input =
-    rego::wf
+    wf
     | (Top <<= Rego)
     | (Rego <<= Query * Input * DataSeq * ModuleSeq)
     | (ModuleSeq <<= Module++)
@@ -106,50 +123,49 @@ namespace rego::ir
     (Policy <<= Static * PlanSeq * FunctionSeq)
     | (Static <<= StringSeq * BuiltInFunctionSeq * PathSeq)
     | (StringSeq <<= String++)
-    | (String <<= Idx * Value)[Idx]
     | (BuiltInFunctionSeq <<= BuiltInFunction++)
     | (BuiltInFunction <<= Name * Decl)
-    | (PathSeq <<= Path++)
+    | (PathSeq <<= String++)
     | (PlanSeq <<= Plan++[1])
-    | (Plan <<= Name * BlockSeq)
+    | (Plan <<= (Name >>= String) * BlockSeq)
     | (BlockSeq <<= Block++)
     | (Block <<= Statement++)
     | (FunctionSeq <<= Function++)
-    | (Function <<= Name * Path * ParameterSeq * Return * BlockSeq)
-    | (ArrayAppendStmt <<= Local * Operand)
-    | (AssignIntStmt <<= Int64 * Local)
-    | (AssignVarOnceStmt <<= Operand * Local)
-    | (AssignVarStmt <<= Operand * Local)
-    | (BlockStmt <<= BlockSeq)
-    | (BreakStmt <<= UInt32)
-    | (CallDynamicStmt <<= OperandSeq * LocalSeq * Local)
-    | (CallStmt <<= Name * LocalSeq * Local)
-    | (DotStmt <<= Operand * Operand * Local)
-    | (EqualStmt <<= Operand * Operand)
-    | (IsArrayStmt <<= Operand)
-    | (IsDefinedStmt <<= Operand)
-    | (IsObjectStmt <<= Operand)
-    | (IsSetStmt <<= Operand)
-    | (IsUndefinedStmt <<= Operand)
-    | (LenStmt <<= Operand * Local)
-    | (MakeArrayStmt <<= Int32 * Local)
-    | (MakeNullStmt <<= Local)
-    | (MakeNumberIntStmt <<= Int64 * Local)
-    | (MakeNumberRefStmt <<= Int32 * Local)
-    | (MakeObjectStmt <<= Local)
-    | (MakeSetStmt <<= Local)
-    | (NotEqualStmt <<= Operand * Operand)
+    | (Function <<= (Name >>= String) * (Path >>= StringSeq) * ParameterSeq * (Return >>= Local) * BlockSeq)
+    | (ArrayAppendStmt <<= (Array >>= Local) * (Value >>= Operand))
+    | (AssignIntStmt <<= (Value >>= Int64) * (Target >>= Local))
+    | (AssignVarOnceStmt <<= (Source >>= Operand) * (Target >>= Local))
+    | (AssignVarStmt <<= (Source >>= Operand) * (Target >>= Local))
+    | (BlockStmt <<= (Blocks >>= BlockSeq))
+    | (BreakStmt <<= (Index >>= UInt32))
+    | (CallDynamicStmt <<= (Func >>= OperandSeq) * (Args >>= OperandSeq) * (Result >>= Local))
+    | (CallStmt <<= (Func >>= String) * (Args >>= OperandSeq) * (Result >>= Local))
+    | (DotStmt <<= (Source >>= Operand) * (Key >>= Operand) * (Target >>= Local))
+    | (EqualStmt <<= (Lhs >>= Operand) * (Rhs >>= Operand))
+    | (IsArrayStmt <<= (Source >>= Operand))
+    | (IsDefinedStmt <<= (Source >>= Operand))
+    | (IsObjectStmt <<= (Source >>= Operand))
+    | (IsSetStmt <<= (Source >>= Operand))
+    | (IsUndefinedStmt <<= (Source >>= Operand))
+    | (LenStmt <<= (Source >>= Operand) * (Target >>= Local))
+    | (MakeArrayStmt <<= (Capacity >>= Int32) * (Target >>= Local))
+    | (MakeNullStmt <<= (Target >>= Local))
+    | (MakeNumberIntStmt <<= (Value >>= Int64) * (Target >>= Local))
+    | (MakeNumberRefStmt <<= (Index >>= Int32) * (Target >>= Local))
+    | (MakeObjectStmt <<= (Target >>= Local))
+    | (MakeSetStmt <<= (Target >>= Local))
+    | (NotEqualStmt <<= (Lhs >>= Operand) * (Rhs >>= Operand))
     | (NotStmt <<= Block)
-    | (ObjectInsertOnceStmt <<= Operand * Operand * Local)
-    | (ObjectInsertStmt <<= Operand * Operand * Local)
-    | (ObjectMergeStmt <<= Local * Local * Local)
-    | (ResetLocalStmt <<= Local)
-    | (ResultSetAddStmt <<= Local)
-    | (ReturnLocalStmt <<= Local)
-    | (ScanStmt <<= Local * Local * Local * Block)
-    | (SetAddStmt <<= Operand * Local)
-    | (WithStmt <<= Local * Int32Seq * Operand * Block)
-    | (Operand <<= Local | True | False | Idx)
+    | (ObjectInsertOnceStmt <<= (Key >>= Operand) * (Value >>= Operand) * (Object >>= Local))
+    | (ObjectInsertStmt <<= (Key >>= Operand) * (Value >>= Operand) * (Object >>= Local))
+    | (ObjectMergeStmt <<= (Lhs >>= Local) * (Rhs >>= Local) * (Target >>= Local))
+    | (ResetLocalStmt <<= (Target >>= Local))
+    | (ResultSetAddStmt <<= (Value >>= Local))
+    | (ReturnLocalStmt <<= (Source >>= Local))
+    | (ScanStmt <<= (Source >>= Local) * (Key >>= Local) * (Value >>= Local) * Block)
+    | (SetAddStmt <<= (Value >>= Operand) * (Set >>= Local))
+    | (WithStmt <<= Local * (Path >>= Int32Seq) * (Value >>= Operand) * Block)
+    | (Operand <<= Local | Boolean | StringIndex)
     | (LocalSeq <<= Local++)
     | (OperandSeq <<= Operand++)
     | (Int32Seq <<= Int32++)
