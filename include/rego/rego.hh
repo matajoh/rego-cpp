@@ -813,7 +813,7 @@ namespace rego
   const std::string WellFormedError = "wellformed_error";
   const std::string RuntimeError = "runtime_error";
   const std::string RecursionError = "rego_recursion_error";
-  const std::string DefaultVersion = "v0";
+  const std::string DefaultVersion = "v1";
 
   /**
    * Generates an error node.
@@ -1050,6 +1050,8 @@ namespace rego
 
     Node fast_query();
 
+    Node compile(const std::vector<std::string>& entrypoints);
+
     /**
      * The path to the debug directory.
      *
@@ -1104,6 +1106,7 @@ namespace rego
     Reader m_json;
     Rewriter m_from_json;
     Rewriter m_to_input;
+    Rewriter m_compile;
     std::size_t m_data_count;
     std::map<std::string, Node> m_cache;
 
@@ -1146,4 +1149,6 @@ namespace rego
   Rewriter fast();
 
   Rewriter from_ir_json();
+
+  Rewriter to_ir();
 }

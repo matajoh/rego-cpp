@@ -4,8 +4,6 @@
 #include "trieste/writer.h"
 #include "internal.hh"
 
-// TODO add semantic concepts like target, source, etc.
-
 namespace rego::ir
 {
   inline const auto Policy = TokenDef("rego-ir-policy");
@@ -71,6 +69,8 @@ namespace rego::ir
   inline const auto ScanStmt = TokenDef("rego-ir-scanstmt");
   inline const auto SetAddStmt = TokenDef("rego-ir-setaddstmt");
   inline const auto WithStmt = TokenDef("rego-ir-withstmt");
+  inline const auto DebugFileStmt = TokenDef("rego-ir-debugfilestmt");
+  inline const auto DebugLocationStmt = TokenDef("rego-ir-debuglocationstmt");
 
   // utility tokens
   inline const auto Key = TokenDef("rego-ir-key");
@@ -90,6 +90,8 @@ namespace rego::ir
   inline const auto Object = TokenDef("rego-ir-object");
   inline const auto Set = TokenDef("rego-ir-set");
   inline const auto Name = TokenDef("rego-ir-name");
+  inline const auto Row = TokenDef("rego-ir-row");
+  inline const auto Col = TokenDef("rego-ir-col");
 
   // clang-format off
   inline const auto wf_ir_input =
@@ -116,7 +118,8 @@ namespace rego::ir
     MakeNumberIntStmt | MakeNumberRefStmt | MakeObjectStmt | MakeSetStmt |
     NotEqualStmt | NotStmt | ObjectInsertOnceStmt | ObjectInsertStmt |
     ObjectMergeStmt | ResetLocalStmt | ResultSetAddStmt |
-    ReturnLocalStmt | ScanStmt | SetAddStmt | WithStmt;
+    ReturnLocalStmt | ScanStmt | SetAddStmt | WithStmt |
+    DebugFileStmt | DebugLocationStmt;
 
   // clang-format off
   inline const auto wf_ir =
@@ -165,6 +168,8 @@ namespace rego::ir
     | (ScanStmt <<= (Source >>= Local) * (Key >>= Local) * (Value >>= Local) * Block)
     | (SetAddStmt <<= (Value >>= Operand) * (Set >>= Local))
     | (WithStmt <<= Local * (Path >>= Int32Seq) * (Value >>= Operand) * Block)
+    | (DebugFileStmt <<= (Source >>= StringIndex))
+    | (DebugLocationStmt <<= (Row >>= Int32) * (Col >>= Int32))
     | (Operand <<= Local | Boolean | StringIndex)
     | (LocalSeq <<= Local++)
     | (OperandSeq <<= Operand++)

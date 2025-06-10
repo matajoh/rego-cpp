@@ -41,24 +41,55 @@ int main(int argc, char** argv)
 
   app.set_help_all_flag("--help-all", "Expand all help");
 
+  CLI::App* eval = app.add_subcommand(
+    "eval", "Evaluate a Rego query against data and input documents");
+  CLI::App* build = app.add_subcommand(
+    "build", "Build a Rego bundle from paths and data documents");
+  CLI::App* version =
+    app.add_subcommand("version", "Print the version of the rego tool");
+  app.require_subcommand(1);
+
   std::string query_expr;
-  app.add_option("query,-q,--query", query_expr, "Query")->required();
+  eval->add_option("query,-q,--query", query_expr, "Query")->required();
 
   std::vector<std::filesystem::path> data_paths;
-  app.add_option("-d,--data", data_paths, "Data/Policy files");
+  eval->add_option("-d,--data", data_paths, "Data/Policy files");
+  build->add_option("-d,--data", data_paths, "Data/Policy files");
+
+  std::vector<std::string> entrypoints;
+  build
+    ->add_option(
+      "-e,--entrypoint", entrypoints, "Entrypoints to support in the bundle")
+    ->required();
 
   std::filesystem::path input_path;
-  app.add_option("-i,--input", input_path, "Input JSON file");
+  eval->add_option("-i,--input", input_path, "Input JSON file");
 
   bool wf_checks{false};
-  app.add_flag("-w,--wf", wf_checks, "Enable well-formedness checks");
+  eval->add_flag("-w,--wf", wf_checks, "Enable well-formedness checks");
+  build->add_flag("-w,--wf", wf_checks, "Enable well-formedness checks");
 
   std::filesystem::path output;
-  app.add_option("-a,--ast", output, "Folder to use for AST output");
+  eval->add_option("-a,--ast", output, "Folder to use for AST output");
+  build->add_option("-a,--ast", output, "Folder to use for AST output");
+
+  std::filesystem::path bundle_path;
+  build->add_option(
+    "-b,--bundle", bundle_path, "Path to write the bundle to")
+    ->required();
 
   std::string log_level;
-  app
-    .add_option(
+  eval
+    ->add_option(
+      "-l,--log_level",
+      log_level,
+      "Set Log Level to one of "
+      "Trace, Debug (includes log of unification),"
+      "Info, Warning, Output, Error, "
+      "None")
+    ->check(rego::set_log_level_from_string);
+  build
+    ->add_option(
       "-l,--log_level",
       log_level,
       "Set Log Level to one of "
@@ -68,14 +99,16 @@ int main(int argc, char** argv)
     ->check(rego::set_log_level_from_string);
 
   bool v0_compatible{false};
-  app.add_flag(
-    "-1,--v0-compatible", v0_compatible, "opt-in to OPA features and behaviors prior to the OPA v1.0 release");
+  eval->add_flag(
+    "--v0-compatible",
+    v0_compatible,
+    "opt-in to OPA features and behaviors prior to the OPA v1.0 release");
 
   bool fast{false};
-  app.add_flag("-f,--fast", fast, "Use fast query mode");
+  eval->add_flag("-f,--fast", fast, "Use fast query mode");
 
   bool timing{false};
-  app.add_flag("-t,--timing", timing, "Print timing information");
+  eval->add_flag("-t,--timing", timing, "Print timing information");
 
 #ifndef NDEBUG
   if (timing)
@@ -92,6 +125,18 @@ int main(int argc, char** argv)
   catch (const CLI::ParseError& e)
   {
     return app.exit(e);
+  }
+
+  if (version->parsed())
+  {
+    trieste::logging::Output()
+      << "Version: " << REGOCPP_VERSION << std::endl
+      << "Build Commit: " << REGOCPP_GIT_HASH << std::endl
+      << "Build Timestamp: " << REGOCPP_BUILD_DATE << std::endl
+      << "Build Toolchain: " << REGOCPP_BUILD_TOOLCHAIN << std::endl
+      << "Platform: " << REGOCPP_PLATFORM << std::endl
+      << "Rego Version" << REGOCPP_OPA_VERSION << std::endl;
+    return 0;
   }
 
   std::shared_ptr<rego::Interpreter> interpreter;
@@ -199,10 +244,19 @@ int main(int argc, char** argv)
       trieste::logging::Output()
         << interpreter->output_to_string(result) << std::endl;
     }
-    else
+    else if(eval->parsed())
     {
       Timer timer("Query", timing);
       trieste::logging::Output() << interpreter->query(query_expr) << std::endl;
+    } else if(build->parsed()){
+      Timer timer("Build bundle", timing);
+      auto bundle = interpreter->compile(entrypoints);
+      if (bundle == nullptr)
+      {
+        trieste::logging::Error() << "Failed to build bundle" << std::endl;
+        return 1;
+      }
+      trieste::logging::Output() << "Bundle built successfully" << std::endl;
     }
     return 0;
   }
