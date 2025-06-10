@@ -21,6 +21,7 @@ reader.cc
 unify.cc
 fast.cc
 ir.cc
+ir_json.cc
 unify/strings.cc
 unify/merge_data.cc
 unify/varrefheads.cc

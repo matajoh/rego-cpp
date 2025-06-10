@@ -88,6 +88,7 @@ namespace rego
     m_json(json::reader()),
     m_from_json(from_json()),
     m_to_input(to_input()),
+    m_compile(to_ir()),
     m_data_count(0)
   {
     m_ast = Top << (Rego << Query << Input << DataSeq << ModuleSeq);
@@ -480,8 +481,27 @@ namespace rego
     m_unify.debug_path(m_debug_path / "unify");
     m_fast.debug_path(m_debug_path / "fast");
     m_to_input.debug_path(m_debug_path / "input");
+    m_compile.debug_path(m_debug_path / "compile");
 
     return *this;
+  }
+
+  Node Interpreter::compile(const std::vector<std::string>&)
+  {
+    m_builtins->clear();
+
+    auto result = m_ast >> m_compile;
+
+    PRINT_ACTION_METRICS();
+
+    if (!result.ok)
+    {
+      logging::Error err;
+      result.print_errors(err);
+      return ErrorSeq << result.errors;
+    }
+
+    return result.ast->front();
   }
 
   const std::filesystem::path& Interpreter::debug_path() const
@@ -497,6 +517,7 @@ namespace rego
     m_fast.debug_enabled(enabled);
     m_from_json.debug_enabled(enabled);
     m_to_input.debug_enabled(enabled);
+    m_compile.debug_enabled(enabled);
     return *this;
   }
 
@@ -513,6 +534,7 @@ namespace rego
     m_fast.wf_check_enabled(enabled);
     m_from_json.wf_check_enabled(enabled);
     m_to_input.wf_check_enabled(enabled);
+    m_compile.wf_check_enabled(enabled);
     return *this;
   }
 
