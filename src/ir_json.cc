@@ -63,8 +63,8 @@ namespace
              << ((T(json::Member)
                   << (T(json::Key, "type") * T(json::String, "\"local\""))) *
                  (T(json::Member)
-                  << (T(json::Key, "value") * T(json::Number)[Local])))) >>
-          [](Match& _) { return Operand << (Local ^ _(Local)); },
+                  << (T(json::Key, "value") * T(json::Number)[LocalIndex])))) >>
+          [](Match& _) { return Operand << (LocalIndex ^ _(LocalIndex)); },
 
         In(json::Member, json::Array) *
             (T(json::Object)
@@ -99,7 +99,7 @@ namespace
 
             Node array =
               object_lookdown(stmt, "array", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             Node value = object_lookdown(stmt, "value", Operand);
             return ArrayAppendStmt << array << value;
@@ -120,7 +120,7 @@ namespace
             Node source = object_lookdown(stmt, "source", Operand);
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return AssignVarOnceStmt << source << target;
           },
@@ -140,7 +140,7 @@ namespace
             Node source = object_lookdown(stmt, "source", Operand);
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return AssignVarStmt << source << target;
           },
@@ -203,7 +203,7 @@ namespace
               });
             Node result =
               object_lookdown(stmt, "result", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return CallStmt << func << args << result;
           },
@@ -223,7 +223,7 @@ namespace
             Node key = object_lookdown(stmt, "key", Operand);
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return DotStmt << source << key << target;
           },
@@ -242,7 +242,7 @@ namespace
 
             Node source =
               object_lookdown(stmt, "source", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return IsDefinedStmt << source;
           },
@@ -265,7 +265,7 @@ namespace
               });
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return MakeArrayStmt << capacity << target;
           },
@@ -284,7 +284,7 @@ namespace
 
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return MakeNullStmt << target;
           },
@@ -307,7 +307,7 @@ namespace
               });
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return MakeNumberRefStmt << index << target;
           },
@@ -326,7 +326,7 @@ namespace
 
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return MakeObjectStmt << target;
           },
@@ -347,7 +347,7 @@ namespace
             Node value = object_lookdown(stmt, "value", Operand);
             Node object =
               object_lookdown(stmt, "object", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return ObjectInsertStmt << key << value << object;
           },
@@ -365,12 +365,12 @@ namespace
             }
 
             Node a = object_lookdown(
-              stmt, "a", json::Number, [](const Node& n) { return Local ^ n; });
+              stmt, "a", json::Number, [](const Node& n) { return LocalIndex ^ n; });
             Node b = object_lookdown(
-              stmt, "b", json::Number, [](const Node& n) { return Local ^ n; });
+              stmt, "b", json::Number, [](const Node& n) { return LocalIndex ^ n; });
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return ObjectMergeStmt << a << b << target;
           },
@@ -389,7 +389,7 @@ namespace
 
             Node target =
               object_lookdown(stmt, "target", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return ResetLocalStmt << target;
           },
@@ -408,7 +408,7 @@ namespace
 
             Node value =
               object_lookdown(stmt, "value", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return ResultSetAddStmt << value;
           },
@@ -427,7 +427,7 @@ namespace
 
             Node source =
               object_lookdown(stmt, "source", json::Number, [](const Node& n) {
-                return Local ^ n;
+                return LocalIndex ^ n;
               });
             return ReturnLocalStmt << source;
           },
@@ -533,13 +533,13 @@ namespace
                   Node localseq = NodeDef::create(LocalSeq);
                   for (const auto& param : *n)
                   {
-                    localseq << (Local ^ param);
+                    localseq << (LocalIndex ^ param);
                   }
                   return localseq;
                 });
               Node local = object_lookdown(
                 child, "return", json::Number, [](const Node& n) {
-                  return Local ^ n;
+                  return LocalIndex ^ n;
                 });
               Node blockseq = object_lookdown(child, "blocks", BlockSeq);
               funcseq

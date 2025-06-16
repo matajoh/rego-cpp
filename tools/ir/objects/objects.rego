@@ -11,9 +11,11 @@ shapes := [rect, cube]
 names := ["prod", `smoke1`, "dev"]
 sites := [{"name": "prod"}, {"name": names[index]}, {"name": "dev"}]
 e := {
-    a: "foo",
-    "three": c,
-    names[2]: b,
-    "four": d,
+	a: "foo",
+	"three": c,
+	names[2]: b,
+	"four": d,
 }
-f := e["dev"]
+
+f := e.dev
+g := [data.one, data.two, data.three]

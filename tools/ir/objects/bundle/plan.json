@@ -71,6 +71,15 @@
                 "value": "f"
             },
             {
+                "value": "g"
+            },
+            {
+                "value": "one"
+            },
+            {
+                "value": "two"
+            },
+            {
                 "value": "index"
             },
             {
@@ -483,7 +492,7 @@
                                                 {
                                                     "type": "CallStmt",
                                                     "stmt": {
-                                                        "func": "g0.data.objects.index",
+                                                        "func": "g0.data.objects.g",
                                                         "args": [
                                                             {
                                                                 "type": "local",
@@ -534,7 +543,7 @@
                                                 {
                                                     "type": "CallStmt",
                                                     "stmt": {
-                                                        "func": "g0.data.objects.names",
+                                                        "func": "g0.data.objects.index",
                                                         "args": [
                                                             {
                                                                 "type": "local",
@@ -556,11 +565,62 @@
                                                     "stmt": {
                                                         "key": {
                                                             "type": "string_index",
-                                                            "value": 25
+                                                            "value": 26
                                                         },
                                                         "value": {
                                                             "type": "local",
                                                             "value": 11
+                                                        },
+                                                        "object": 2,
+                                                        "file": 0,
+                                                        "col": 0,
+                                                        "row": 0
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "file": 0,
+                                    "col": 0,
+                                    "row": 0
+                                }
+                            },
+                            {
+                                "type": "BlockStmt",
+                                "stmt": {
+                                    "blocks": [
+                                        {
+                                            "stmts": [
+                                                {
+                                                    "type": "CallStmt",
+                                                    "stmt": {
+                                                        "func": "g0.data.objects.names",
+                                                        "args": [
+                                                            {
+                                                                "type": "local",
+                                                                "value": 0
+                                                            },
+                                                            {
+                                                                "type": "local",
+                                                                "value": 1
+                                                            }
+                                                        ],
+                                                        "result": 12,
+                                                        "file": 0,
+                                                        "col": 0,
+                                                        "row": 0
+                                                    }
+                                                },
+                                                {
+                                                    "type": "ObjectInsertStmt",
+                                                    "stmt": {
+                                                        "key": {
+                                                            "type": "string_index",
+                                                            "value": 28
+                                                        },
+                                                        "value": {
+                                                            "type": "local",
+                                                            "value": 12
                                                         },
                                                         "object": 2,
                                                         "file": 0,
@@ -596,7 +656,7 @@
                                                                 "value": 1
                                                             }
                                                         ],
-                                                        "result": 12,
+                                                        "result": 13,
                                                         "file": 0,
                                                         "col": 0,
                                                         "row": 0
@@ -607,11 +667,11 @@
                                                     "stmt": {
                                                         "key": {
                                                             "type": "string_index",
-                                                            "value": 26
+                                                            "value": 29
                                                         },
                                                         "value": {
                                                             "type": "local",
-                                                            "value": 12
+                                                            "value": 13
                                                         },
                                                         "object": 2,
                                                         "file": 0,
@@ -647,7 +707,7 @@
                                                                 "value": 1
                                                             }
                                                         ],
-                                                        "result": 13,
+                                                        "result": 14,
                                                         "file": 0,
                                                         "col": 0,
                                                         "row": 0
@@ -658,11 +718,11 @@
                                                     "stmt": {
                                                         "key": {
                                                             "type": "string_index",
-                                                            "value": 27
+                                                            "value": 30
                                                         },
                                                         "value": {
                                                             "type": "local",
-                                                            "value": 13
+                                                            "value": 14
                                                         },
                                                         "object": 2,
                                                         "file": 0,
@@ -698,7 +758,7 @@
                                                                 "value": 1
                                                             }
                                                         ],
-                                                        "result": 14,
+                                                        "result": 15,
                                                         "file": 0,
                                                         "col": 0,
                                                         "row": 0
@@ -709,11 +769,11 @@
                                                     "stmt": {
                                                         "key": {
                                                             "type": "string_index",
-                                                            "value": 28
+                                                            "value": 31
                                                         },
                                                         "value": {
                                                             "type": "local",
-                                                            "value": 14
+                                                            "value": 15
                                                         },
                                                         "object": 2,
                                                         "file": 0,
@@ -750,9 +810,9 @@
                                                                             },
                                                                             "key": {
                                                                                 "type": "string_index",
-                                                                                "value": 30
+                                                                                "value": 33
                                                                             },
-                                                                            "target": 16,
+                                                                            "target": 17,
                                                                             "file": 0,
                                                                             "col": 0,
                                                                             "row": 0
@@ -761,9 +821,9 @@
                                                                     {
                                                                         "type": "ObjectMergeStmt",
                                                                         "stmt": {
-                                                                            "a": 16,
+                                                                            "a": 17,
                                                                             "b": 2,
-                                                                            "target": 15,
+                                                                            "target": 16,
                                                                             "file": 0,
                                                                             "col": 0,
                                                                             "row": 0
@@ -793,7 +853,7 @@
                                                             "type": "local",
                                                             "value": 2
                                                         },
-                                                        "target": 15,
+                                                        "target": 16,
                                                         "file": 0,
                                                         "col": 0,
                                                         "row": 0
@@ -812,9 +872,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 15
+                                        "value": 16
                                     },
-                                    "target": 17,
+                                    "target": 18,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -823,7 +883,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 18,
+                                    "target": 19,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -838,9 +898,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 17
+                                        "value": 18
                                     },
-                                    "object": 18,
+                                    "object": 19,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -849,7 +909,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 18,
+                                    "value": 19,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -878,7 +938,7 @@
                                             "value": 1
                                         }
                                     ],
-                                    "result": 19,
+                                    "result": 20,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -889,9 +949,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 19
+                                        "value": 20
                                     },
-                                    "target": 20,
+                                    "target": 21,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -900,7 +960,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 21,
+                                    "target": 22,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -915,9 +975,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 20
+                                        "value": 21
                                     },
-                                    "object": 21,
+                                    "object": 22,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -926,7 +986,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 21,
+                                    "value": 22,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -955,7 +1015,7 @@
                                             "value": 1
                                         }
                                     ],
-                                    "result": 22,
+                                    "result": 23,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -966,9 +1026,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 22
+                                        "value": 23
                                     },
-                                    "target": 23,
+                                    "target": 24,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -977,7 +1037,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 24,
+                                    "target": 25,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -992,9 +1052,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 23
+                                        "value": 24
                                     },
-                                    "object": 24,
+                                    "object": 25,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1003,7 +1063,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 24,
+                                    "value": 25,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1032,7 +1092,7 @@
                                             "value": 1
                                         }
                                     ],
-                                    "result": 25,
+                                    "result": 26,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1043,9 +1103,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 25
+                                        "value": 26
                                     },
-                                    "target": 26,
+                                    "target": 27,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1054,7 +1114,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 27,
+                                    "target": 28,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1069,9 +1129,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 26
+                                        "value": 27
                                     },
-                                    "object": 27,
+                                    "object": 28,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1080,7 +1140,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 27,
+                                    "value": 28,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1109,7 +1169,7 @@
                                             "value": 1
                                         }
                                     ],
-                                    "result": 28,
+                                    "result": 29,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1120,9 +1180,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 28
+                                        "value": 29
                                     },
-                                    "target": 29,
+                                    "target": 30,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1131,7 +1191,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 30,
+                                    "target": 31,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1146,9 +1206,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 29
+                                        "value": 30
                                     },
-                                    "object": 30,
+                                    "object": 31,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1157,7 +1217,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 30,
+                                    "value": 31,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1186,7 +1246,7 @@
                                             "value": 1
                                         }
                                     ],
-                                    "result": 31,
+                                    "result": 32,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1197,9 +1257,9 @@
                                 "stmt": {
                                     "source": {
                                         "type": "local",
-                                        "value": 31
+                                        "value": 32
                                     },
-                                    "target": 32,
+                                    "target": 33,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1208,7 +1268,7 @@
                             {
                                 "type": "MakeObjectStmt",
                                 "stmt": {
-                                    "target": 33,
+                                    "target": 34,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1223,9 +1283,9 @@
                                     },
                                     "value": {
                                         "type": "local",
-                                        "value": 32
+                                        "value": 33
                                     },
-                                    "object": 33,
+                                    "object": 34,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -1234,7 +1294,7 @@
                             {
                                 "type": "ResultSetAddStmt",
                                 "stmt": {
-                                    "value": 33,
+                                    "value": 34,
                                     "file": 0,
                                     "col": 0,
                                     "row": 0
@@ -2112,7 +2172,7 @@
                                     ],
                                     "result": 4,
                                     "file": 0,
-                                    "col": 13,
+                                    "col": 10,
                                     "row": 17
                                 }
                             },
@@ -2125,7 +2185,7 @@
                                     },
                                     "target": 5,
                                     "file": 0,
-                                    "col": 13,
+                                    "col": 10,
                                     "row": 17
                                 }
                             },
@@ -2145,7 +2205,7 @@
                                     ],
                                     "result": 6,
                                     "file": 0,
-                                    "col": 14,
+                                    "col": 11,
                                     "row": 15
                                 }
                             },
@@ -2158,7 +2218,7 @@
                                     },
                                     "target": 7,
                                     "file": 0,
-                                    "col": 14,
+                                    "col": 11,
                                     "row": 15
                                 }
                             },
@@ -2178,7 +2238,7 @@
                                     ],
                                     "result": 8,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 14
                                 }
                             },
@@ -2191,7 +2251,7 @@
                                     },
                                     "target": 9,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 14
                                 }
                             },
@@ -2211,7 +2271,7 @@
                                     ],
                                     "result": 10,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 16
                                 }
                             },
@@ -2221,7 +2281,7 @@
                                     "Index": 18,
                                     "target": 11,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 16
                                 }
                             },
@@ -2238,7 +2298,7 @@
                                     },
                                     "target": 12,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 16
                                 }
                             },
@@ -2251,7 +2311,7 @@
                                     },
                                     "target": 13,
                                     "file": 0,
-                                    "col": 5,
+                                    "col": 2,
                                     "row": 16
                                 }
                             },
@@ -2271,7 +2331,7 @@
                                     ],
                                     "result": 14,
                                     "file": 0,
-                                    "col": 15,
+                                    "col": 12,
                                     "row": 16
                                 }
                             },
@@ -2284,7 +2344,7 @@
                                     },
                                     "target": 15,
                                     "file": 0,
-                                    "col": 15,
+                                    "col": 12,
                                     "row": 16
                                 }
                             },
@@ -2455,7 +2515,7 @@
                                     "target": 3,
                                     "file": 0,
                                     "col": 1,
-                                    "row": 19
+                                    "row": 20
                                 }
                             },
                             {
@@ -2475,7 +2535,7 @@
                                     "result": 4,
                                     "file": 0,
                                     "col": 6,
-                                    "row": 19
+                                    "row": 20
                                 }
                             },
                             {
@@ -2492,7 +2552,7 @@
                                     "target": 5,
                                     "file": 0,
                                     "col": 6,
-                                    "row": 19
+                                    "row": 20
                                 }
                             },
                             {
@@ -2505,7 +2565,7 @@
                                     "target": 6,
                                     "file": 0,
                                     "col": 6,
-                                    "row": 19
+                                    "row": 20
                                 }
                             },
                             {
@@ -2518,7 +2578,7 @@
                                     "target": 3,
                                     "file": 0,
                                     "col": 1,
-                                    "row": 19
+                                    "row": 20
                                 }
                             }
                         ]
@@ -2531,7 +2591,7 @@
                                     "source": 3,
                                     "file": 0,
                                     "col": 1,
-                                    "row": 19
+                                    "row": 20
                                 }
                             },
                             {
@@ -2544,7 +2604,7 @@
                                     "target": 2,
                                     "file": 0,
                                     "col": 1,
-                                    "row": 19
+                                    "row": 20
                                 }
                             }
                         ]
@@ -2557,7 +2617,7 @@
                                     "source": 2,
                                     "file": 0,
                                     "col": 1,
-                                    "row": 19
+                                    "row": 20
                                 }
                             }
                         ]
@@ -2567,6 +2627,376 @@
                     "g0",
                     "objects",
                     "f"
+                ]
+            },
+            {
+                "name": "g0.data.objects.g",
+                "params": [
+                    0,
+                    1
+                ],
+                "return": 2,
+                "blocks": [
+                    {
+                        "stmts": [
+                            {
+                                "type": "ResetLocalStmt",
+                                "stmt": {
+                                    "target": 3,
+                                    "file": 0,
+                                    "col": 1,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "BlockStmt",
+                                "stmt": {
+                                    "blocks": [
+                                        {
+                                            "stmts": [
+                                                {
+                                                    "type": "BlockStmt",
+                                                    "stmt": {
+                                                        "blocks": [
+                                                            {
+                                                                "stmts": [
+                                                                    {
+                                                                        "type": "DotStmt",
+                                                                        "stmt": {
+                                                                            "source": {
+                                                                                "type": "local",
+                                                                                "value": 1
+                                                                            },
+                                                                            "key": {
+                                                                                "type": "string_index",
+                                                                                "value": 24
+                                                                            },
+                                                                            "target": 6,
+                                                                            "file": 0,
+                                                                            "col": 7,
+                                                                            "row": 21
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "type": "BreakStmt",
+                                                                        "stmt": {
+                                                                            "index": 1,
+                                                                            "file": 0,
+                                                                            "col": 7,
+                                                                            "row": 21
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "file": 0,
+                                                        "col": 7,
+                                                        "row": 21
+                                                    }
+                                                },
+                                                {
+                                                    "type": "BreakStmt",
+                                                    "stmt": {
+                                                        "index": 1,
+                                                        "file": 0,
+                                                        "col": 7,
+                                                        "row": 21
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "file": 0,
+                                    "col": 7,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 6
+                                    },
+                                    "target": 7,
+                                    "file": 0,
+                                    "col": 7,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "BlockStmt",
+                                "stmt": {
+                                    "blocks": [
+                                        {
+                                            "stmts": [
+                                                {
+                                                    "type": "BlockStmt",
+                                                    "stmt": {
+                                                        "blocks": [
+                                                            {
+                                                                "stmts": [
+                                                                    {
+                                                                        "type": "DotStmt",
+                                                                        "stmt": {
+                                                                            "source": {
+                                                                                "type": "local",
+                                                                                "value": 1
+                                                                            },
+                                                                            "key": {
+                                                                                "type": "string_index",
+                                                                                "value": 25
+                                                                            },
+                                                                            "target": 10,
+                                                                            "file": 0,
+                                                                            "col": 17,
+                                                                            "row": 21
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "type": "BreakStmt",
+                                                                        "stmt": {
+                                                                            "index": 1,
+                                                                            "file": 0,
+                                                                            "col": 17,
+                                                                            "row": 21
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "file": 0,
+                                                        "col": 17,
+                                                        "row": 21
+                                                    }
+                                                },
+                                                {
+                                                    "type": "BreakStmt",
+                                                    "stmt": {
+                                                        "index": 1,
+                                                        "file": 0,
+                                                        "col": 17,
+                                                        "row": 21
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "file": 0,
+                                    "col": 17,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 10
+                                    },
+                                    "target": 11,
+                                    "file": 0,
+                                    "col": 17,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "BlockStmt",
+                                "stmt": {
+                                    "blocks": [
+                                        {
+                                            "stmts": [
+                                                {
+                                                    "type": "BlockStmt",
+                                                    "stmt": {
+                                                        "blocks": [
+                                                            {
+                                                                "stmts": [
+                                                                    {
+                                                                        "type": "DotStmt",
+                                                                        "stmt": {
+                                                                            "source": {
+                                                                                "type": "local",
+                                                                                "value": 1
+                                                                            },
+                                                                            "key": {
+                                                                                "type": "string_index",
+                                                                                "value": 20
+                                                                            },
+                                                                            "target": 14,
+                                                                            "file": 0,
+                                                                            "col": 27,
+                                                                            "row": 21
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "type": "BreakStmt",
+                                                                        "stmt": {
+                                                                            "index": 1,
+                                                                            "file": 0,
+                                                                            "col": 27,
+                                                                            "row": 21
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "file": 0,
+                                                        "col": 27,
+                                                        "row": 21
+                                                    }
+                                                },
+                                                {
+                                                    "type": "BreakStmt",
+                                                    "stmt": {
+                                                        "index": 1,
+                                                        "file": 0,
+                                                        "col": 27,
+                                                        "row": 21
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "file": 0,
+                                    "col": 27,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 14
+                                    },
+                                    "target": 15,
+                                    "file": 0,
+                                    "col": 27,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "MakeArrayStmt",
+                                "stmt": {
+                                    "capacity": 3,
+                                    "target": 16,
+                                    "file": 0,
+                                    "col": 6,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "ArrayAppendStmt",
+                                "stmt": {
+                                    "value": {
+                                        "type": "local",
+                                        "value": 7
+                                    },
+                                    "array": 16,
+                                    "file": 0,
+                                    "col": 6,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "ArrayAppendStmt",
+                                "stmt": {
+                                    "value": {
+                                        "type": "local",
+                                        "value": 11
+                                    },
+                                    "array": 16,
+                                    "file": 0,
+                                    "col": 6,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "ArrayAppendStmt",
+                                "stmt": {
+                                    "value": {
+                                        "type": "local",
+                                        "value": 15
+                                    },
+                                    "array": 16,
+                                    "file": 0,
+                                    "col": 6,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 16
+                                    },
+                                    "target": 17,
+                                    "file": 0,
+                                    "col": 6,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarOnceStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 17
+                                    },
+                                    "target": 3,
+                                    "file": 0,
+                                    "col": 1,
+                                    "row": 21
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "stmts": [
+                            {
+                                "type": "IsDefinedStmt",
+                                "stmt": {
+                                    "source": 3,
+                                    "file": 0,
+                                    "col": 1,
+                                    "row": 21
+                                }
+                            },
+                            {
+                                "type": "AssignVarOnceStmt",
+                                "stmt": {
+                                    "source": {
+                                        "type": "local",
+                                        "value": 3
+                                    },
+                                    "target": 2,
+                                    "file": 0,
+                                    "col": 1,
+                                    "row": 21
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "stmts": [
+                            {
+                                "type": "ReturnLocalStmt",
+                                "stmt": {
+                                    "source": 2,
+                                    "file": 0,
+                                    "col": 1,
+                                    "row": 21
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "path": [
+                    "g0",
+                    "objects",
+                    "g"
                 ]
             },
             {
@@ -2591,7 +3021,7 @@
                             {
                                 "type": "MakeNumberRefStmt",
                                 "stmt": {
-                                    "Index": 24,
+                                    "Index": 27,
                                     "target": 4,
                                     "file": 0,
                                     "col": 1,
@@ -3123,7 +3553,7 @@
                                 "stmt": {
                                     "key": {
                                         "type": "string_index",
-                                        "value": 29
+                                        "value": 32
                                     },
                                     "value": {
                                         "type": "string_index",
@@ -3162,7 +3592,7 @@
                                 "stmt": {
                                     "key": {
                                         "type": "string_index",
-                                        "value": 29
+                                        "value": 32
                                     },
                                     "value": {
                                         "type": "local",
@@ -3201,7 +3631,7 @@
                                 "stmt": {
                                     "key": {
                                         "type": "string_index",
-                                        "value": 29
+                                        "value": 32
                                     },
                                     "value": {
                                         "type": "string_index",
