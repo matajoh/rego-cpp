@@ -4,6 +4,7 @@
 #include "trieste/json.h"
 #include "trieste/wf.h"
 #include "unify.hh"
+#include "ir.hh"
 
 namespace
 {
@@ -486,11 +487,24 @@ namespace rego
     return *this;
   }
 
-  Node Interpreter::compile(const std::vector<std::string>&)
+  Node Interpreter::compile(const std::vector<std::string>& entrypoints)
   {
     m_builtins->clear();
 
-    auto result = m_ast >> m_compile;
+    Node entrypointseq = NodeDef::create(ir::EntryPointSeq);
+    for (auto& entrypoint : entrypoints)
+    {
+      entrypointseq << (ir::String ^ entrypoint);
+    }
+
+    Node ir = ir::IR << entrypointseq;
+
+    {
+      WFContext context(wf_unify_input);
+      ir << m_ast / Rego / DataSeq << m_ast / Rego / ModuleSeq;
+    }
+
+    auto result = (Top << ir) >> m_compile;
 
     PRINT_ACTION_METRICS();
 

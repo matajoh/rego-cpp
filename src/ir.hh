@@ -7,13 +7,14 @@
 
 namespace rego::ir
 {
+  inline const auto IR = TokenDef("rego-ir", flag::symtab);
   inline const auto Policy = TokenDef("rego-ir-policy", flag::symtab);
   inline const auto DataSeq = TokenDef("rego-ir-dataseq");
   inline const auto Static = TokenDef("rego-ir-static");
   inline const auto String = TokenDef("rego-ir-string", flag::print);
   inline const auto BuiltInFunction = TokenDef("rego-ir-builtinfunction", flag::lookup | flag::symtab);
   inline const auto Decl = TokenDef("rego-ir-decl");
-  inline const auto Plan = TokenDef("rego-ir-plan", flag::lookup);
+  inline const auto Plan = TokenDef("rego-ir-plan", flag::lookup | flag::symtab);
   inline const auto Block = TokenDef("rego-ir-block");
   inline const auto Function = TokenDef("rego-ir-function", flag::lookup | flag::symtab);
   inline const auto File = TokenDef("rego-ir-file");
@@ -36,6 +37,7 @@ namespace rego::ir
   inline const auto LocalSeq = TokenDef("rego-ir-localseq");
   inline const auto OperandSeq = TokenDef("rego-ir-operandseq");
   inline const auto Int32Seq = TokenDef("rego-ir-int32seq");
+  inline const auto EntryPointSeq = TokenDef("rego-ir-entrypointseq");
 
   // Statements
   inline const auto ArrayAppendStmt = TokenDef("rego-ir-arrayappendstmt");
@@ -98,8 +100,9 @@ namespace rego::ir
   // clang-format off
   inline const auto wf_ir_input =
     wf
-    | (Top <<= Rego)
-    | (Rego <<= Query * Input * DataSeq * ModuleSeq)
+    | (Top <<= IR)
+    | (IR <<= EntryPointSeq * DataSeq * ModuleSeq)
+    | (EntryPointSeq <<= String++)
     | (ModuleSeq <<= Module++)
     | (DataSeq <<= json::Object++)
     | (Import <<= Ref * Var)[Var]
