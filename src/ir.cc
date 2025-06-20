@@ -275,7 +275,8 @@ namespace
          T(r::Expr)
              << (T(r::Term) << (T(r::Scalar) << T(r::Int, r::Float)[String])) >>
            [](Match& _) {
-             Location number_name = _(String)->parent(r::Rule)->fresh({"number"});
+             Location number_name =
+               _(String)->parent(r::Rule)->fresh({"number"});
              Location term_name = _(String)->parent(r::Rule)->fresh({"term"});
              Node number = Local << (Ident ^ number_name);
              Node term = Local << (Ident ^ term_name);
