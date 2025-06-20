@@ -8,6 +8,7 @@
 namespace rego::ir
 {
   inline const auto IR = TokenDef("rego-ir", flag::symtab);
+  inline const auto Data = TokenDef("rego-ir-data");
   inline const auto Policy = TokenDef("rego-ir-policy", flag::symtab);
   inline const auto DataSeq = TokenDef("rego-ir-dataseq");
   inline const auto Static = TokenDef("rego-ir-static");
@@ -121,7 +122,9 @@ namespace rego::ir
 
   // clang-format off
   inline const auto wf_ir =
-    (Policy <<= Static * PlanSeq * FunctionSeq)
+    (IR <<= (Data * Policy))
+    | (Data <<= json::Object)
+    | (Policy <<= Static * PlanSeq * FunctionSeq)
     | (Static <<= StringSeq * BuiltInFunctionSeq * PathSeq)
     | (StringSeq <<= String++)
     | (BuiltInFunctionSeq <<= BuiltInFunction++)

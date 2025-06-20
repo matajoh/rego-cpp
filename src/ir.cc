@@ -18,37 +18,16 @@ namespace
   inline const auto Ident = TokenDef("rego-ir-ident", flag::print);
 
   // clang-format off
-  inline const auto wf_ir_strings_files_documents =
+  inline const auto wf_ir_documents =
     wf_ir_input
     | (IR <<= BaseDocument * VirtualDocument * Policy)
     | (BaseDocument <<= json::Object)
     | (Policy <<= Static * EntryPointSeq)
     | (VirtualDocument <<= Ident * r::Policy * DocumentSeq)[Ident]
     | (DocumentSeq <<= VirtualDocument++)
-    | (Static <<= StringSeq * PathSeq)
-    | (StringSeq <<= String++)
     | (PathSeq <<= String++)
-    | (r::Scalar <<= StringIndex | NumberIndex | r::True | r::False | r::Null)
-    | (r::Import <<= r::Ref * r::Var)[r::Var]
     ;
   // clang-format on
-
-  Node to_stringseq(Token token, const std::map<std::string, int>& strings)
-  {
-    Node seq = NodeDef::create(token);
-    std::vector<std::string> strings_vec(strings.size());
-    for (const auto& [str, id] : strings)
-    {
-      strings_vec[id] = str;
-    }
-
-    for (const auto& str : strings_vec)
-    {
-      seq << (String ^ str);
-    }
-
-    return seq;
-  }
 
   Node add_or_find_child_document(Node parent, const std::string& child_name)
   {
@@ -63,7 +42,7 @@ namespace
     }
 
     Node child = VirtualDocument << (Ident ^ child_name) << r::Policy
-                                 << NodeDef::create(DocumentSeq);
+                                 << DocumentSeq;
     children->push_back(child);
     return child;
   }
@@ -100,17 +79,33 @@ namespace
     return VirtualDocument << (Ident ^ "data") << r::Policy << docseq;
   }
 
+  Node to_stringseq(Token token, const std::map<std::string, int>& strings)
+  {
+    Node seq = NodeDef::create(token);
+    std::vector<std::string> strings_vec(strings.size());
+    for (const auto& [str, id] : strings)
+    {
+      strings_vec[id] = str;
+    }
+
+    for (const auto& str : strings_vec)
+    {
+      seq << (String ^ str);
+    }
+
+    return seq;
+  }
+
   /** This pass extracts all string literals, merges the base documents, and
    * nests the virtual documents.
    */
-  PassDef strings_files_documents()
+  PassDef documents()
   {
-    auto strings = std::make_shared<std::map<std::string, int>>();
     auto files = std::make_shared<std::map<std::string, int>>();
     auto documents = std::make_shared<Nodes>();
     PassDef pass = {
-      "strings_files_documents",
-      wf_ir_strings_files_documents,
+      "documents",
+      wf_ir_documents,
       dir::bottomup | dir::once,
       {
         In(r::DataSeq) * (T(json::Object)[Lhs] * T(json::Object)[Rhs]) >>
@@ -126,55 +121,17 @@ namespace
             files->emplace(src, files->size());
           }
 
-          documents->push_back(VirtualDocument << _(r::Ref) << _(r::Policy));
+          documents->push_back(
+            VirtualDocument << _(r::Ref) << _(r::Policy) << DocumentSeq);
           return nullptr;
         },
-
-        T(r::String)[String] * In(r::Scalar) >>
-          [strings](Match& _) {
-            std::string str(_(String)->location().view());
-            size_t index;
-            if (!str.empty())
-            {
-              auto it = strings->find(str);
-              if (it == strings->end())
-              {
-                index = strings->size();
-                (*strings)[str] = index;
-              }
-              else
-              {
-                index = it->second;
-              }
-            }
-
-            return StringIndex ^ std::to_string(index);
-          },
-
-        T(r::Int, r::Float)[NumberIndex] >>
-          [strings](Match& _) {
-            std::string num_str(_(NumberIndex)->location().view());
-            size_t index;
-            auto it = strings->find(num_str);
-            if (it == strings->end())
-            {
-              index = strings->size();
-              (*strings)[num_str] = index;
-            }
-            else
-            {
-              index = it->second;
-            }
-            return NumberIndex ^ std::to_string(index);
-          },
 
         T(r::ModuleSeq) >> [](Match&) -> Node { return nullptr; },
 
         In(IR) *
             (T(EntryPointSeq)[EntryPointSeq] *
              (T(r::DataSeq) << (~T(json::Object)[json::Object] * End))) >>
-          [strings, files, documents](Match& _) -> Node {
-          Node stringseq = to_stringseq(StringSeq, *strings);
+          [files, documents](Match& _) -> Node {
           Node pathseq = to_stringseq(PathSeq, *files);
 
           Node dataobj = _(json::Object);
@@ -187,17 +144,13 @@ namespace
           Node virtualdoc = merge_documents(*documents);
 
           return Seq << basedoc << virtualdoc
-                     << (Policy << (Static << stringseq << pathseq)
-                                << _(EntryPointSeq));
+                     << (Policy << (Static << pathseq) << _(EntryPointSeq));
         },
       }};
 
-    pass.pre([documents, strings, files](Node) {
+    pass.pre([documents, files](Node) {
       documents->clear();
-      strings->clear();
       files->clear();
-
-      strings->emplace("result", 0);
 
       return 0;
     });
@@ -212,18 +165,17 @@ namespace
     TokenDef("rego-ir-rule", flag::lookup | flag::lookdown);
   inline const auto RuleSeq = TokenDef("rego-ir-ruleseq");
   inline const auto EntryPoint = TokenDef("rego-ir-entrypoint");
-
-  inline const auto wf_ir_functions_locals_stmts = AssignVarOnceStmt |
-    IsDefinedStmt | MakeNullStmt | MakeNumberRefStmt | ReturnLocalStmt;
+  inline const auto FuncName = TokenDef("rego-ir-funcname");
 
   // clang-format off
   inline const auto wf_ir_lift_functions =
-    wf_ir_strings_files_documents
+    wf_ir_documents
+    | (VirtualDocument <<= Ident * RuleSeq * DocumentSeq)[Ident]
     | (Function <<= (Name >>= String) * ParameterSeq * LocalSeq * Local * BlockSeq)
-    | (Rule <<= Ident * String)[Ident]
+    | (Rule <<= Ident * (FuncName >>= String))[Ident]
     | (ParameterSeq <<= Local++)
     | (BlockSeq <<= Block++)
-    | (Block <<= wf_ir_functions_locals_stmts++[1])
+    | (Block <<= Statement++[1])
     | (AssignVarOnceStmt <<= Operand * LocalRef)
     | (IsDefinedStmt <<= LocalRef)
     | (MakeNullStmt <<= LocalRef)
@@ -232,7 +184,7 @@ namespace
     | (ReturnLocalStmt <<= LocalRef)
     | (CallStmt <<= String * OperandSeq * LocalRef)
     | (ObjectInsertStmt <<= Operand * Operand * LocalRef)
-    | (Operand <<= LocalRef | Boolean | StringIndex)
+    | (Operand <<= LocalRef | Boolean | String)
     | (EntryPointSeq <<= EntryPoint++[1])
     | (EntryPoint <<= Ident * r::Ref)
     | (Local <<= Ident)[Ident]
@@ -289,131 +241,132 @@ namespace
   PassDef lift_functions()
   {
     std::shared_ptr<Nodes> functions = std::make_shared<Nodes>();
-    PassDef pass = {
-      "functions_locals",
-      wf_ir_lift_functions,
-      dir::bottomup | dir::once,
-      {
-        T(r::Expr)
-            << (T(r::Term) << (T(r::Scalar) << T(StringIndex)[StringIndex])) >>
-          [](Match& _) {
-            Location name = _.fresh({"term"});
-            Node term = Local << (Ident ^ name);
-            return Seq << term
-                       << (Block
-                           << (ResetLocalStmt << (LocalRef ^ name))
-                           << (AssignVarOnceStmt << (Operand << _(StringIndex))
-                                                 << (LocalRef ^ name)));
-          },
+    PassDef pass =
+      {"functions_locals",
+       wf_ir_lift_functions,
+       dir::bottomup | dir::once,
+       {
+         T(r::Expr)
+             << (T(r::Term)
+                 << (T(r::Scalar) << T(r::String, r::RawString)[String])) >>
+           [](Match& _) {
+             Location name = _(String)->parent(r::Rule)->fresh({"term"});
+             Node term = Local << (Ident ^ name);
+             return Seq << term
+                        << (Block << (ResetLocalStmt << (LocalRef ^ name))
+                                  << (AssignVarOnceStmt
+                                      << (Operand << (String ^ _(String)))
+                                      << (LocalRef ^ name)));
+           },
 
-        T(r::Expr)
-            << (T(r::Term)
-                << (T(r::Scalar) << T(r::True, r::False)[Boolean])) >>
-          [](Match& _) {
-            Location name = _.fresh({"term"});
-            Node term = Local << (Ident ^ name);
-            return Seq << term
-                       << (Block << (ResetLocalStmt << (LocalRef ^ name))
-                                 << (AssignVarOnceStmt
-                                     << (Operand << (Boolean ^ _(Boolean)))
-                                     << (LocalRef ^ name)));
-          },
+         T(r::Expr)
+             << (T(r::Term)
+                 << (T(r::Scalar) << T(r::True, r::False)[Boolean])) >>
+           [](Match& _) {
+             Location name = _(Boolean)->parent(r::Rule)->fresh({"term"});
+             Node term = Local << (Ident ^ name);
+             return Seq << term
+                        << (Block << (ResetLocalStmt << (LocalRef ^ name))
+                                  << (AssignVarOnceStmt
+                                      << (Operand << (Boolean ^ _(Boolean)))
+                                      << (LocalRef ^ name)));
+           },
 
-        T(r::Expr)
-            << (T(r::Term) << (T(r::Scalar) << T(NumberIndex)[NumberIndex])) >>
-          [](Match& _) {
-            Location number_name = _.fresh({"number"});
-            Location term_name = _.fresh({"term"});
-            Node number = Local << (Ident ^ number_name);
-            Node term = Local << (Ident ^ term_name);
-            return Seq << term
-                       << (Block
-                           << (ResetLocalStmt << (LocalRef ^ term_name))
-                           << (MakeNumberRefStmt << _(NumberIndex)
-                                                 << (LocalRef ^ number_name))
-                           << (AssignVarOnceStmt
-                               << (Operand << (LocalRef ^ number_name))
-                               << (LocalRef ^ term_name)));
-          },
+         T(r::Expr)
+             << (T(r::Term) << (T(r::Scalar) << T(r::Int, r::Float)[String])) >>
+           [](Match& _) {
+             Location number_name = _(String)->parent(r::Rule)->fresh({"number"});
+             Location term_name = _(String)->parent(r::Rule)->fresh({"term"});
+             Node number = Local << (Ident ^ number_name);
+             Node term = Local << (Ident ^ term_name);
+             return Seq << term
+                        << (Block
+                            << (ResetLocalStmt << (LocalRef ^ term_name))
+                            << (MakeNumberRefStmt << (String ^ _(String))
+                                                  << (LocalRef ^ number_name))
+                            << (AssignVarOnceStmt
+                                << (Operand << (LocalRef ^ number_name))
+                                << (LocalRef ^ term_name)));
+           },
 
-        T(r::Expr) << (T(r::Term) << (T(r::Scalar) << T(r::Null))) >>
-          [](Match& _) {
-            Location null_name = _.fresh({"null"});
-            Location term_name = _.fresh({"term"});
-            Node null = Local << (Ident ^ null_name);
-            Node term = Local << (Ident ^ term_name);
-            return Seq << term
-                       << (Block << (ResetLocalStmt << (LocalRef ^ term_name))
-                                 << (MakeNullStmt << (LocalRef ^ null_name))
-                                 << (AssignVarOnceStmt
-                                     << (Operand << (LocalRef ^ null_name))
-                                     << (LocalRef ^ term_name)));
-          },
+         T(r::Expr) << (T(r::Term) << (T(r::Scalar) << T(r::Null)[r::Null])) >>
+           [](Match& _) {
+             Location null_name = _(r::Null)->parent(r::Rule)->fresh({"null"});
+             Location term_name = _(r::Null)->parent(r::Rule)->fresh({"term"});
+             Node null = Local << (Ident ^ null_name);
+             Node term = Local << (Ident ^ term_name);
+             return Seq << term
+                        << (Block << (ResetLocalStmt << (LocalRef ^ term_name))
+                                  << (MakeNullStmt << (LocalRef ^ null_name))
+                                  << (AssignVarOnceStmt
+                                      << (Operand << (LocalRef ^ null_name))
+                                      << (LocalRef ^ term_name)));
+           },
 
-        In(r::Policy) *
-            (T(r::Rule)
-             << (T(r::False) *
-                 (T(r::RuleHead)
-                  << ((T(r::RuleRef) << T(r::Ref)[r::Ref]) *
-                      (T(r::RuleHeadComp)
-                       << (T(Local)[Local] * T(Block)[Block])))) *
-                 T(r::RuleBodySeq)[BlockSeq])) >>
-          [functions](Match& _) {
-            Node param_input = Local << (Ident ^ "input");
-            Node param_data = Local << (Ident ^ "data");
-            Location return_name = _.fresh({"return"});
-            Node local_return = Local << (Ident ^ return_name);
-            Node local_head = _(Local);
-            Node local_ref = LocalRef ^ (local_head / Ident)->location();
-            std::string func_name =
-              ruleref_to_string(_(r::Ref), "g0.data.", ".");
+         In(r::Policy) *
+             (T(r::Rule)[r::Rule]
+              << (T(r::False) *
+                  (T(r::RuleHead)
+                   << ((T(r::RuleRef) << T(r::Ref)[r::Ref]) *
+                       (T(r::RuleHeadComp)
+                        << (T(Local)[Local] * T(Block)[Block])))) *
+                  T(r::RuleBodySeq)[BlockSeq])) >>
+           [functions](Match& _) {
+             Node param_input = Local << (Ident ^ "input");
+             Node param_data = Local << (Ident ^ "data");
+             Location return_name = _(r::Rule)->fresh({"return"});
+             Node local_return = Local << (Ident ^ return_name);
+             Node local_head = _(Local);
+             Node local_ref = LocalRef ^ (local_head / Ident)->location();
+             std::string func_name =
+               ruleref_to_string(_(r::Ref), "g0.data.", ".");
 
-            functions->push_back(
-              Function << (String ^ func_name)
-                       << (ParameterSeq << param_input << param_data)
-                       << (LocalSeq << local_head) << local_return
-                       << (BlockSeq << _(Block)
-                                    << (Block << (IsDefinedStmt << local_ref)
-                                              << (AssignVarOnceStmt
-                                                  << (Operand << local_ref)
-                                                  << (LocalRef ^ return_name)))
-                                    << (Block
-                                        << (ReturnLocalStmt
-                                            << (LocalRef ^ return_name)))));
+             functions->push_back(
+               Function << (String ^ func_name)
+                        << (ParameterSeq << param_input << param_data)
+                        << (LocalSeq << local_head) << local_return
+                        << (BlockSeq << _(Block)
+                                     << (Block << (IsDefinedStmt << local_ref)
+                                               << (AssignVarOnceStmt
+                                                   << (Operand << local_ref)
+                                                   << (LocalRef ^ return_name)))
+                                     << (Block
+                                         << (ReturnLocalStmt
+                                             << (LocalRef ^ return_name)))));
 
-            Node ident = Ident ^ (_(r::Ref) / r::RefHead)->front();
-            return (Rule << (Ident ^ ident) << (String ^ func_name));
-          },
+             Node ident = Ident ^ (_(r::Ref) / r::RefHead)->front();
+             return (Rule << (Ident ^ ident) << (String ^ func_name));
+           },
 
-        In(EntryPointSeq) * T(String)[String] >>
-          [](Match& _) {
-            std::string entry_point(_(String)->location().view());
-            size_t start = 0;
-            size_t end = entry_point.find('/');
+         In(EntryPointSeq) * T(String)[String] >>
+           [](Match& _) {
+             std::string entry_point(_(String)->location().view());
+             size_t start = 0;
+             size_t end = entry_point.find('/');
 
-            Node refargs = NodeDef::create(r::RefArgSeq);
-            while (end != std::string::npos)
-            {
-              std::string arg = entry_point.substr(start, end - start);
-              refargs << (r::RefArgDot << (r::Var ^ arg));
-              start = end + 1;
-              end = entry_point.find('/', start);
-            }
+             Node refargs = NodeDef::create(r::RefArgSeq);
+             while (end != std::string::npos)
+             {
+               std::string arg = entry_point.substr(start, end - start);
+               refargs << (r::RefArgDot << (r::Var ^ arg));
+               start = end + 1;
+               end = entry_point.find('/', start);
+             }
 
-            std::string last_arg = entry_point.substr(start);
-            if (!last_arg.empty())
-            {
-              refargs << (r::RefArgDot << (r::Var ^ last_arg));
-            }
+             std::string last_arg = entry_point.substr(start);
+             if (!last_arg.empty())
+             {
+               refargs << (r::RefArgDot << (r::Var ^ last_arg));
+             }
 
-            return EntryPoint
-              << (Ident ^ _(String))
-              << (r::Ref << (r::RefHead << (r::Var ^ "data")) << refargs);
-          },
+             return EntryPoint
+               << (Ident ^ _(String))
+               << (r::Ref << (r::RefHead << (r::Var ^ "data")) << refargs);
+           },
 
-        In(VirtualDocument) * T(r::Policy)[r::Policy] >>
-          [](Match& _) { return RuleSeq << *_[r::Policy]; },
-      }};
+         In(VirtualDocument) * T(r::Policy)[r::Policy] >>
+           [](Match& _) { return RuleSeq << *_[r::Policy]; },
+       }};
 
     pass.post([functions](Node top) {
       Node policy = top / IR / Policy;
@@ -438,6 +391,75 @@ namespace
     ;
   // clang-format on
 
+  Node rule_block(
+    Node frame,
+    Nodes& locals,
+    Node rule,
+    const Location& key,
+    const Location& obj_name)
+  {
+    Location func_name = (rule / FuncName)->location();
+    Location value_name = frame->fresh({"value"});
+    locals.push_back(Local << (Ident ^ value_name));
+    return Block << (CallStmt
+                     << (String ^ func_name)
+                     << (OperandSeq << (Operand << (LocalRef ^ "input"))
+                                    << (Operand << (LocalRef ^ "data")))
+                     << (LocalRef ^ value_name))
+                 << (ObjectInsertStmt << (Operand << (String ^ key))
+                                      << (Operand << (LocalRef ^ value_name))
+                                      << (LocalRef ^ obj_name));
+  }
+
+  Node document_block(
+    Node frame,
+    Nodes& locals,
+    Node document,
+    const Location& key,
+    const Location& obj_name)
+  {
+    Location doc_name = frame->fresh((document / Ident)->location());
+    locals.push_back(Local << (Ident ^ doc_name));
+    Node block = Block << (MakeObjectStmt << (LocalRef ^ doc_name));
+    Node children = document / DocumentSeq;
+    if (!children->empty())
+    {
+      for (Node child : *children)
+      {
+        block
+          << (BlockStmt
+              << (BlockSeq << document_block(
+                    frame,
+                    locals,
+                    child,
+                    (child / Ident)->location(),
+                    doc_name)));
+      }
+    }
+
+    Node rules = document / RuleSeq;
+    if (!rules->empty())
+    {
+      for (Node rule : *(document / RuleSeq))
+      {
+        block
+          << (BlockStmt
+              << (BlockSeq << rule_block(
+                    frame,
+                    locals,
+                    rule,
+                    (rule / Ident)->location(),
+                    doc_name)));
+      }
+    }
+
+    block
+      << (ObjectInsertStmt << (Operand << (String ^ key))
+                           << (Operand << (LocalRef ^ doc_name))
+                           << (LocalRef ^ obj_name));
+    return block;
+  }
+
   PassDef add_plans()
   {
     // add the plans required to satisfy the entry points
@@ -447,7 +469,7 @@ namespace
       dir::bottomup | dir::once,
       {
         In(EntryPointSeq) *
-            (T(EntryPoint)
+            (T(EntryPoint)[EntryPoint]
              << (T(Ident)[Ident] *
                  (T(r::Ref)
                   << ((T(r::RefHead) << T(r::Var)[r::Var]) *
@@ -465,40 +487,30 @@ namespace
             plan = plan->lookdown(arg->front()->location()).front();
           }
 
+          Node frame = _(EntryPoint);
+          Nodes locals;
+          Location obj_name = frame->fresh({"obj"});
+          locals.push_back(Local << (Ident ^ obj_name));
+          Node block = Block << (MakeObjectStmt << (LocalRef ^ obj_name));
           if (plan == Rule)
           {
-            Node func_name = String ^ (plan / String);
-            Location call_name = _.fresh({"call"});
-            Location result_name = _.fresh({"result"});
-            Location obj_name = _.fresh({"obj"});
-            Node local_call = Local << (Ident ^ call_name);
-            Node local_result = Local << (Ident ^ result_name);
-            Node local_obj = Local << (Ident ^ obj_name);
-            return Plan
-              << _(Ident)
-              << (LocalSeq << local_call << local_result << local_obj)
-              << (BlockSeq
-                  << (Block
-                      << (CallStmt
-                          << (String ^ func_name)
-                          << (OperandSeq << (Operand << (LocalRef ^ "input"))
-                                         << (Operand << (LocalRef ^ "data")))
-                          << (LocalRef ^ call_name))
-                      << (AssignVarStmt << (Operand << (LocalRef ^ call_name))
-                                        << (LocalRef ^ result_name))
-                      << (MakeObjectStmt << (LocalRef ^ obj_name))
-                      << (ObjectInsertStmt
-                          << (Operand << (StringIndex ^ "0"))
-                          << (Operand << (LocalRef ^ result_name))
-                          << (LocalRef ^ obj_name))
-                      << (ResultSetAddStmt << (LocalRef ^ obj_name))));
+            block
+              << (BlockStmt
+                  << (BlockSeq << rule_block(
+                        frame, locals, plan, {"result"}, obj_name)));
           }
           else
           {
-            logging::Output() << "Not supported yet";
+            block
+              << (BlockStmt
+                  << (BlockSeq << document_block(
+                        frame, locals, plan, {"result"}, obj_name)));
           }
 
-          return NoChange;
+          block << (ResultSetAddStmt << (LocalRef ^ obj_name));
+
+          return Plan << (Ident ^ _(Ident)) << (LocalSeq << locals)
+                      << (BlockSeq << block);
         },
 
         In(Policy) * T(EntryPointSeq)[EntryPointSeq] >>
@@ -507,10 +519,92 @@ namespace
       }};
   }
 
-  PassDef index_locals()
+  PassDef index_strings_locals()
   {
+    auto locals = std::make_shared<std::map<std::string, int>>();
+    auto strings = std::make_shared<std::map<std::string, int>>();
     // replace all local refs with their indices in the frame
-    return {"index_locals", wf_ir, dir::bottomup | dir::once, {}};
+    PassDef pass = {
+      "index_strings_locals",
+      wf_ir,
+      dir::bottomup | dir::once,
+      {
+        In(Operand) * T(String)[String] >>
+          [strings](Match& _) {
+            std::string str(_(String)->location().view());
+            size_t index;
+            if (!str.empty())
+            {
+              auto it = strings->find(str);
+              if (it == strings->end())
+              {
+                index = strings->size();
+                (*strings)[str] = index;
+              }
+              else
+              {
+                index = it->second;
+              }
+            }
+
+            return StringIndex ^ std::to_string(index);
+          },
+
+        In(Policy) * (T(Static) << T(PathSeq)[PathSeq]) >>
+          [strings](Match& _) {
+            return Static << to_stringseq(StringSeq, *strings) << _(PathSeq);
+          },
+
+        T(LocalRef)[LocalRef] >>
+          [locals](Match& _) {
+            std::string name(_(LocalRef)->location().view());
+            auto it = locals->find(name);
+            if (it == locals->end())
+            {
+              size_t index = locals->size();
+              (*locals)[name] = index;
+              return LocalIndex ^ std::to_string(index);
+            }
+            else
+            {
+              return LocalIndex ^ std::to_string(it->second);
+            }
+          },
+
+        In(Function, Plan) * T(LocalSeq) >>
+          [](Match& _) -> Node { return nullptr; },
+
+        In(Function, ParameterSeq) * (T(Local) << T(Ident)[Ident]) >>
+          [locals](Match& _) {
+            std::string name(_(Ident)->location().view());
+            auto it = locals->find(name);
+            if (it == locals->end())
+            {
+              size_t index = locals->size();
+              (*locals)[name] = index;
+              return LocalIndex ^ std::to_string(index);
+            }
+            else
+            {
+              return LocalIndex ^ std::to_string(it->second);
+            }
+          },
+
+        In(IR) * (T(BaseDocument) << T(json::Object)[Data]) *
+            T(VirtualDocument) * T(Policy)[Policy] >>
+          [](Match& _) { return Seq << (Data << _(Data)) << _(Policy); },
+      }};
+
+    pass.pre([strings, locals](Node) {
+      strings->clear();
+      locals->clear();
+
+      locals->emplace("input", 0);
+      locals->emplace("data", 1);
+      return 0;
+    });
+
+    return pass;
   }
 }
 
@@ -520,10 +614,7 @@ namespace rego
   {
     return {
       "to_ir",
-      {strings_files_documents(),
-       lift_functions(),
-       add_plans(),
-       index_locals()},
+      {documents(), lift_functions(), add_plans(), index_strings_locals()},
       wf_ir_input};
   }
 }
