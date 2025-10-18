@@ -340,6 +340,7 @@ namespace rego
     register_builtins(builtins::encoding());
     register_builtins(builtins::graph());
     register_builtins(builtins::internal());
+    register_builtins(builtins::json());
     register_builtins(builtins::numbers());
     register_builtins(builtins::objects());
     register_builtins(builtins::regex());

@@ -90,6 +90,12 @@ if(REGOCPP_OPA_TESTS)
   inputvalues
   intersection
   jsonbuiltins
+  jsonfilter
+  jsonfilteridempotent
+  jsonpatch
+  jsonremove
+  jsonremoveidempotent
+  jsonschema
   keywordrefs
   negation
   nestedreferences
