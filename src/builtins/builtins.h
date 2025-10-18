@@ -14,6 +14,7 @@ namespace rego
     std::vector<BuiltIn> encoding();
     std::vector<BuiltIn> graph();
     std::vector<BuiltIn> internal();
+    std::vector<BuiltIn> json();
     std::vector<BuiltIn> numbers();
     std::vector<BuiltIn> objects();
     std::vector<BuiltIn> regex();

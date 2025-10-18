@@ -30,6 +30,7 @@ builtins/conversions.cc
 builtins/encoding.cc
 builtins/graph.cc
 builtins/internal.cc
+builtins/json.cc
 builtins/numbers.cc
 builtins/objects.cc
 builtins/regex.cc
