@@ -1,5 +1,4 @@
 #include "builtins.hh"
-#include "rego.hh"
 
 namespace
 {

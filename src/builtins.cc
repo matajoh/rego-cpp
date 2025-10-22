@@ -334,6 +334,7 @@ namespace rego
 
     register_builtins(builtins::aggregates());
     register_builtins(builtins::arrays());
+    register_builtins(builtins::aws());
     register_builtins(builtins::bits());
     register_builtins(builtins::comparison());
     register_builtins(builtins::conversions());
@@ -345,6 +346,7 @@ namespace rego
     register_builtins(builtins::http());
     register_builtins(builtins::internal());
     register_builtins(builtins::json());
+    register_builtins(builtins::jwt());
     register_builtins(builtins::net());
     register_builtins(builtins::numbers());
     register_builtins(builtins::objects());

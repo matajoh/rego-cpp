@@ -23,6 +23,7 @@ dependency_graph.cc
 internal.cc
 builtins/aggregates.cc
 builtins/arrays.cc
+builtins/aws.cc
 builtins/base64/base64.cpp
 builtins/bits.cc
 builtins/comparison.cc
@@ -35,6 +36,7 @@ builtins/graphql.cc
 builtins/http.cc
 builtins/internal.cc
 builtins/json.cc
+builtins/jwt.cc
 builtins/net.cc
 builtins/numbers.cc
 builtins/objects.cc
