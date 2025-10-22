@@ -578,6 +578,7 @@ namespace
     typedef std::shared_ptr<PNodeDef> PNode;
     struct PNodeDef
     {
+      bool terminal;
       std::map<Location, PNode> children;
     };
 
@@ -594,6 +595,8 @@ namespace
 
         current = current->children[loc];
       }
+
+      current->terminal = true;
     }
 
     void insert(PNode root, const Node& array)
@@ -685,7 +688,7 @@ namespace
     }
 
     Node paths =
-      unwrap_arg(args, UnwrapOpt(1).types({Array, Set}).func("json.filter"));
+      unwrap_arg(args, UnwrapOpt(1).types({Set, Array}).func("json.filter"));
     if (paths == Error)
     {
       return paths;
@@ -708,7 +711,12 @@ namespace
         continue;
       }
 
-      return err(path, "Invalid JSON path");
+      return err(
+        path,
+        "json.filter: operand 2 must be one of {set, array} containing string "
+        "paths or array of path segments but got " +
+          type_name(path, false),
+        EvalTypeError);
     }
 
     Node result = NodeDef::create(Object);
@@ -737,7 +745,7 @@ namespace
           }
 
           auto pchild = pnode->children[key];
-          if(pchild->children.empty())
+          if (pchild->terminal)
           {
             dst << src_item->clone();
             continue;
@@ -774,7 +782,7 @@ namespace
           Node src_term = src->at(i);
 
           auto pchild = pnode->children[key];
-          if(pchild->children.empty())
+          if (pchild->terminal)
           {
             dst << src_term->clone();
             continue;
@@ -806,7 +814,7 @@ namespace
           }
 
           auto pchild = pnode->children[key];
-          if(pchild->children.empty())
+          if (pchild->terminal)
           {
             dst << src_term->clone();
             continue;
@@ -816,6 +824,196 @@ namespace
           if (!maybe_indexable.success)
           {
             dst << src_term->clone();
+            continue;
+          }
+
+          src_term = maybe_indexable.node;
+          Node dst_term = NodeDef::create(src_term->type());
+          dst << (Term << dst_term);
+
+          frontier.emplace_back(pchild, src_term, dst_term);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  Node remove_decl = bi::Decl
+    << (bi::ArgSeq
+        << (bi::Arg << (bi::Name ^ "object")
+                    << (bi::Description ^ "object to remove paths from")
+                    << (bi::Type
+                        << (bi::DynamicObject << (bi::Type << bi::Any)
+                                              << (bi::Type << bi::Any))))
+        << (bi::Arg
+            << (bi::Name ^ "paths") << (bi::Description ^ "JSON string paths")
+            << (bi::Type
+                << (bi::TypeSeq
+                    << (bi::Type
+                        << (bi::DynamicArray
+                            << (bi::Type
+                                << (bi::TypeSeq
+                                    << (bi::Type << bi::String)
+                                    << (bi::Type
+                                        << (bi::DynamicArray
+                                            << (bi::Type << bi::Any)))))))
+                    << (bi::Type
+                        << (bi::Set
+                            << (bi::Type
+                                << (bi::TypeSeq
+                                    << (bi::Type << bi::String)
+                                    << (bi::Type
+                                        << (bi::DynamicArray
+                                            << (bi::Type << bi::Any)))))))))))
+    << (bi::Result << (bi::Name ^ "filtered")
+                   << (bi::Description ^
+                       "result of removing all keys specified in `paths`")
+                   << (bi::Type << bi::Any));
+
+  Node remove_(Nodes args)
+  {
+    Node object =
+      unwrap_arg(args, UnwrapOpt(0).type(Object).func("json.remove"));
+    if (object == Error)
+    {
+      return object;
+    }
+
+    Node paths =
+      unwrap_arg(args, UnwrapOpt(1).types({Set, Array}).func("json.remove"));
+    if (paths == Error)
+    {
+      return paths;
+    }
+
+    ptree::PNode root = std::make_shared<ptree::PNodeDef>();
+    for (Node path : *paths)
+    {
+      auto maybe_string = unwrap(path, JSONString);
+      if (maybe_string.success)
+      {
+        insert(root, maybe_string.node->location());
+        continue;
+      }
+
+      auto maybe_array = unwrap(path, Array);
+      if (maybe_array.success)
+      {
+        insert(root, maybe_array.node);
+        continue;
+      }
+
+      return err(
+        path,
+        "json.remove: operand 2 must be one of {set, array} containing string "
+        "paths or array of path segments but got " +
+          type_name(path, false),
+        EvalTypeError);
+    }
+
+    Node result = NodeDef::create(Object);
+    std::vector<filter_state> frontier;
+    frontier.emplace_back(root, object, result);
+
+    while (!frontier.empty())
+    {
+      auto [pnode, src, dst] = frontier.back();
+      frontier.pop_back();
+
+      if (src == Object)
+      {
+        for (Node src_item : *src)
+        {
+          auto maybe_key = unwrap(src_item / Key, JSONString);
+          if (!maybe_key.success)
+          {
+            continue;
+          }
+
+          Location key = maybe_key.node->location();
+          if (!pnode->children.contains(key))
+          {
+            dst << src_item->clone();
+            continue;
+          }
+
+          auto pchild = pnode->children[key];
+          if (pchild->terminal)
+          {
+            continue;
+          }
+
+          auto maybe_indexable = unwrap(src_item / Val, {Object, Array, Set});
+          if (!maybe_indexable.success)
+          {
+            continue;
+          }
+
+          Node src_term = maybe_indexable.node;
+          Node dst_term = NodeDef::create(src_term->type());
+          dst
+            << (ObjectItem << (Term << (Scalar << (JSONString ^ key)))
+                           << (Term << dst_term));
+
+          frontier.emplace_back(pchild, src_term, dst_term);
+        }
+        continue;
+      }
+
+      if (src == Array)
+      {
+        for (size_t i = 0; i < src->size(); ++i)
+        {
+          Location key(std::to_string(i));
+          Node src_term = src->at(i);
+
+          if (!pnode->children.contains(key))
+          {
+            dst << src_term->clone();
+            continue;
+          }
+
+          auto pchild = pnode->children[key];
+          if (pchild->terminal)
+          {
+            continue;
+          }
+
+          auto maybe_indexable = unwrap(src_term, {Object, Array, Set});
+          if (!maybe_indexable.success)
+          {
+            continue;
+          }
+
+          src_term = maybe_indexable.node;
+          Node dst_term = NodeDef::create(src_term->type());
+          dst << (Term << dst_term);
+
+          frontier.emplace_back(pchild, src_term, dst_term);
+        }
+      }
+
+      if (src == Set)
+      {
+        for (Node src_term : *src)
+        {
+          Location key(to_key(src_term));
+          if (!pnode->children.contains(key))
+          {
+            dst << src_term->clone();
+            continue;
+          }
+
+          auto pchild = pnode->children[key];
+          if (pchild->terminal)
+          {
+            continue;
+          }
+
+          auto maybe_indexable = unwrap(src_term, {Object, Array, Set});
+          if (!maybe_indexable.success)
+          {
             continue;
           }
 
@@ -901,38 +1099,6 @@ namespace
                                 "all patch operations in `patches`")
                             << (bi::Type << bi::Any));
 
-  Node remove_decl = bi::Decl
-    << (bi::ArgSeq << (bi::Arg
-                       << (bi::Name ^ "object")
-                       << (bi::Description ^ "object to remove paths from")
-                       << (bi::Type
-                           << (bi::DynamicObject << (bi::Type << bi::Any)
-                                                 << (bi::Type << bi::Any))))
-                   << (bi::Arg
-                       << (bi::Name ^ "paths")
-                       << (bi::Description ^ "JSON string paths")
-                       << (bi::Type
-                           << (bi::TypeSeq
-                               << (bi::Type
-                                   << (bi::DynamicArray
-                                       << (bi::TypeSeq
-                                           << (bi::Type << String)
-                                           << (bi::Type
-                                               << (bi::DynamicArray
-                                                   << (bi::Type << bi::Any))))))
-                               << (bi::Type
-                                   << (bi::Set
-                                       << (bi::TypeSeq
-                                           << (bi::Type << String)
-                                           << (bi::Type
-                                               << (bi::DynamicArray
-                                                   << (bi::Type
-                                                       << bi::Any))))))))))
-    << (bi::Result << (bi::Name ^ "filtered")
-                   << (bi::Description ^
-                       "result of removing all keys specified in `paths`")
-                   << (bi::Type << bi::Any));
-
   Node verify_schema_decl = bi::Decl
     << (bi::ArgSeq
         << (bi::Arg << (bi::Name ^ "schema")
@@ -984,10 +1150,7 @@ namespace rego
           Location("json.patch"),
           patch_decl,
           "JSON builtins not available on this platform"),
-        BuiltInDef::placeholder(
-          Location("json.remove"),
-          remove_decl,
-          "JSON builtins not available on this platform"),
+        BuiltInDef::create(Location("json.remove"), remove_decl, remove_),
         BuiltInDef::placeholder(
           Location("json.verify_schema"),
           verify_schema_decl,
