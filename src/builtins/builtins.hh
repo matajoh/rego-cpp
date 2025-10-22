@@ -13,9 +13,13 @@ namespace rego
     std::vector<BuiltIn> conversions();
     std::vector<BuiltIn> crypto();
     std::vector<BuiltIn> encoding();
+    std::vector<BuiltIn> glob();
     std::vector<BuiltIn> graph();
+    std::vector<BuiltIn> graphql();
+    std::vector<BuiltIn> http();
     std::vector<BuiltIn> internal();
     std::vector<BuiltIn> json();
+    std::vector<BuiltIn> net();
     std::vector<BuiltIn> numbers();
     std::vector<BuiltIn> objects();
     std::vector<BuiltIn> regex();

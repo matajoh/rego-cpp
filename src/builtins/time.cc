@@ -1,4 +1,4 @@
-#include "builtins.h"
+#include "builtins.hh"
 #include "re2/stringpiece.h"
 #include "rego.hh"
 

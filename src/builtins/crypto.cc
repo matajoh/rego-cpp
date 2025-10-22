@@ -1,5 +1,4 @@
-#include "builtins.h"
-#include "rego.hh"
+#include "builtins.hh"
 
 namespace
 {
@@ -262,61 +261,43 @@ namespace rego
   {
     std::vector<BuiltIn> crypto()
     {
+      const char* Message = "Cryptography built-ins are not supported";
       return {
         BuiltInDef::placeholder(
-          {"crypto.hmac.equal"},
-          hmac::equal_decl,
-          "Crypto built-ins are not supported"),
+          {"crypto.hmac.equal"}, hmac::equal_decl, Message),
+        BuiltInDef::placeholder({"crypto.hmac.md5"}, hmac::md5_decl, Message),
+        BuiltInDef::placeholder({"crypto.hmac.sha1"}, hmac::sha1_decl, Message),
         BuiltInDef::placeholder(
-          {"crypto.hmac.md5"},
-          hmac::md5_decl,
-          "Crypto built-ins are not supported"),
-        BuiltInDef::placeholder(
-          {"crypto.hmac.sha1"},
-          hmac::sha1_decl,
-          "Crypto built-ins are not supported"),
-        BuiltInDef::placeholder(
-          {"crypto.hmac.sha256"},
-          hmac::sha256_decl,
-          "Crypto built-ins are not supported"),
+          {"crypto.hmac.sha256"}, hmac::sha256_decl, Message),
         BuiltInDef::placeholder(
           {"crypto.hmac.sha512"},
           hmac::sha512_decl,
           "Crypto built-ins are not supported"),
+        BuiltInDef::placeholder({"crypto.md5"}, md5_decl, Message),
         BuiltInDef::placeholder(
-          {"crypto.md5"}, md5_decl, "Crypto built-ins are not supported"),
-        BuiltInDef::placeholder(
-          {"crypto.parse_private_keys"},
-          parse_private_keys_decl,
-          "Crypto built-ins are not supported"),
-        BuiltInDef::placeholder(
-          {"crypto.sha1"}, sha1_decl, "Crypto built-ins are not supported"),
-        BuiltInDef::placeholder(
-          {"crypto.sha256"}, sha256_decl, "Crypto built-ins are not supported"),
+          {"crypto.parse_private_keys"}, parse_private_keys_decl, Message),
+        BuiltInDef::placeholder({"crypto.sha1"}, sha1_decl, Message),
+        BuiltInDef::placeholder({"crypto.sha256"}, sha256_decl, Message),
         BuiltInDef::placeholder(
           {"crypto.x509.parse_and_verify_certificates"},
           x509::parse_and_verify_certificates_decl,
-          "Crypto built-ins are not supported"),
+          Message),
         BuiltInDef::placeholder(
           {"crypto.x509.parse_and_verify_certificates_with_options"},
           x509::parse_and_verify_certificates_with_options_decl,
-          "Crypto built-ins are not supported"),
+          Message),
         BuiltInDef::placeholder(
           {"crypto.x509.parse_certificate_request"},
           x509::parse_certificate_request_decl,
-          "Crypto built-ins are not supported"),
+          Message),
         BuiltInDef::placeholder(
-          {"crypto.x509.certificates"},
-          x509::parse_certificates_decl,
-          "Crypto built-ins are not supported"),
+          {"crypto.x509.certificates"}, x509::parse_certificates_decl, Message),
         BuiltInDef::placeholder(
-          {"crypto.x509.parse_keypair"},
-          x509::parse_keypair_decl,
-          "Crypto built-ins are not supported"),
+          {"crypto.x509.parse_keypair"}, x509::parse_keypair_decl, Message),
         BuiltInDef::placeholder(
           {"crypto.x509.parse_rsa_private_key"},
           x509::parse_rsa_private_key_decl,
-          "Crypto built-ins are not supported"),
+          Message),
       };
     }
   }

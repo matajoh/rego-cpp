@@ -29,9 +29,13 @@ builtins/comparison.cc
 builtins/conversions.cc
 builtins/crypto.cc
 builtins/encoding.cc
+builtins/glob.cc
 builtins/graph.cc
+builtins/graphql.cc
+builtins/http.cc
 builtins/internal.cc
 builtins/json.cc
+builtins/net.cc
 builtins/numbers.cc
 builtins/objects.cc
 builtins/regex.cc

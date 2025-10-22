@@ -1,4 +1,4 @@
-#include "builtins.h"
+#include "builtins.hh"
 #include "rego.hh"
 
 namespace

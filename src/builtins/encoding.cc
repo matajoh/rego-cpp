@@ -1,5 +1,5 @@
 #include "base64/base64.h"
-#include "builtins.h"
+#include "builtins.hh"
 #include "rego.hh"
 #include "trieste/json.h"
 #include "trieste/wf.h"

@@ -1,4 +1,4 @@
-#include "builtins/builtins.h"
+#include "builtins/builtins.hh"
 
 #include "internal.hh"
 #include "rego.hh"
@@ -339,9 +339,13 @@ namespace rego
     register_builtins(builtins::conversions());
     register_builtins(builtins::crypto());
     register_builtins(builtins::encoding());
+    register_builtins(builtins::glob());
     register_builtins(builtins::graph());
+    register_builtins(builtins::graphql());
+    register_builtins(builtins::http());
     register_builtins(builtins::internal());
     register_builtins(builtins::json());
+    register_builtins(builtins::net());
     register_builtins(builtins::numbers());
     register_builtins(builtins::objects());
     register_builtins(builtins::regex());

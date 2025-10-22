@@ -1,0 +1,15 @@
+- [x] Add json builtins
+- [ ] Add stubs for remaining stdlib
+    - [x] crypto
+    - [x] glob
+    - [x] graphql
+    - [x] http
+    - [ ] net
+    - [ ] aws
+    - [ ] io.jwt
+- [ ] Modify test harness to skip tests whose builtins are not available
+- [ ] Modify tests to run the entire OPA directory (with the skipping)
+- [ ] Add Output
+- [ ] VM timeout
+- [ ] Builtin whitelist/blacklist
+- [ ] Selective builtin loading
