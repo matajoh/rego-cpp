@@ -351,6 +351,7 @@ namespace rego
     register_builtins(builtins::numbers());
     register_builtins(builtins::objects());
     register_builtins(builtins::regex());
+    register_builtins(builtins::rego());
     register_builtins(builtins::sets());
     register_builtins(builtins::semver());
     register_builtins(builtins::strings());

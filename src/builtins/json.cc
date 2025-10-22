@@ -1356,23 +1356,23 @@ namespace
   }
 
   Node match_schema_decl = bi::Decl
-    << (bi::ArgSeq << (bi::Arg
-                       << (bi::Name ^ "document")
-                       << (bi::Description ^ "document to verify by schema")
-                       << (bi::Type
-                           << (bi::TypeSeq << (bi::Type << bi::String)
-                                           << (bi::Type
-                                               << (bi::DynamicObject
-                                                   << (bi::Type << bi::Any)
-                                                   << (bi::Type << bi::Any))))))
-                   << (bi::Arg
-                       << (bi::Name ^ "schema")
-                       << (bi::Description ^ "schema to verify document by")
-                       << (bi::Type
-                           << (bi::TypeSeq << (bi::Type << bi::String)
-                                           << (bi::DynamicObject
-                                               << (bi::Type << bi::Any)
-                                               << (bi::Type << bi::Any))))))
+    << (bi::ArgSeq
+        << (bi::Arg << (bi::Name ^ "document")
+                    << (bi::Description ^ "document to verify by schema")
+                    << (bi::Type
+                        << (bi::TypeSeq << (bi::Type << bi::String)
+                                        << (bi::Type
+                                            << (bi::DynamicObject
+                                                << (bi::Type << bi::Any)
+                                                << (bi::Type << bi::Any))))))
+        << (bi::Arg << (bi::Name ^ "schema")
+                    << (bi::Description ^ "schema to verify document by")
+                    << (bi::Type
+                        << (bi::TypeSeq << (bi::Type << bi::String)
+                                        << (bi::Type
+                                            << (bi::DynamicObject
+                                                << (bi::Type << bi::Any)
+                                                << (bi::Type << bi::Any)))))))
     << (bi::Result
         << (bi::Name ^ "output")
         << (bi::Description ^

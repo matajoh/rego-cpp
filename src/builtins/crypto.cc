@@ -73,21 +73,23 @@ namespace
                             << (bi::Description ^ "MD5-hash of `x`")
                             << (bi::Type << bi::String));
 
-  Node parse_private_keys_decl = bi::Decl
-    << (bi::ArgSeq << (bi::Name ^ "keys")
-                   << (bi::Description ^
-                       "PEM encoded data containing one or more private keys "
-                       "as concatenated blocks. Optionally Base64 encoded.")
-                   << (bi::Type << bi::String))
-    << (bi::Result << (bi::Name ^ "output")
-                   << (bi::Description ^
-                       "parsed private keys represented as objects")
-                   << (bi::Type
-                       << (bi::DynamicArray
-                           << (bi::Type
-                               << (bi::DynamicObject
-                                   << (bi::Type << bi::String)
-                                   << (bi::Type << bi::Any))))));
+  Node parse_private_keys_decl =
+    bi::Decl << (bi::ArgSeq
+                 << (bi::Arg
+                     << (bi::Name ^ "keys")
+                     << (bi::Description ^
+                         "PEM encoded data containing one or more private keys "
+                         "as concatenated blocks. Optionally Base64 encoded.")
+                     << (bi::Type << bi::String)))
+             << (bi::Result << (bi::Name ^ "output")
+                            << (bi::Description ^
+                                "parsed private keys represented as objects")
+                            << (bi::Type
+                                << (bi::DynamicArray
+                                    << (bi::Type
+                                        << (bi::DynamicObject
+                                            << (bi::Type << bi::String)
+                                            << (bi::Type << bi::Any))))));
 
   Node sha1_decl =
     bi::Decl << (bi::ArgSeq
@@ -291,7 +293,9 @@ namespace rego
           x509::parse_certificate_request_decl,
           Message),
         BuiltInDef::placeholder(
-          {"crypto.x509.certificates"}, x509::parse_certificates_decl, Message),
+          {"crypto.x509.parse_certificates"},
+          x509::parse_certificates_decl,
+          Message),
         BuiltInDef::placeholder(
           {"crypto.x509.parse_keypair"}, x509::parse_keypair_decl, Message),
         BuiltInDef::placeholder(

@@ -149,7 +149,7 @@ namespace
                  << (bi::Arg << (bi::Name ^ "name")
                              << (bi::Description ^ "domain name to resolve")
                              << (bi::Type << bi::String)))
-             << (bi::Return
+             << (bi::Result
                  << (bi::Name ^ "addrs")
                  << (bi::Description ^
                      "IP addresses (v4 and v6) that `name` resolves to")

@@ -957,6 +957,22 @@ namespace
                    << (bi::Description ^ "string with replaced substrings")
                    << (bi::Type << bi::String));
 
+  Node render_template_decl = bi::Decl
+    << (bi::ArgSeq << (bi::Arg << (bi::Name ^ "value")
+                               << (bi::Description ^ "a templated string")
+                               << (bi::Type << bi::String))
+                   << (bi::Arg
+                       << (bi::Name ^ "vars")
+                       << (bi::Description ^
+                           "a mapping of template variable keys to values")
+                       << (bi::Type
+                           << (bi::DynamicObject << (bi::Type << bi::String)
+                                                 << (bi::Type << bi::Any)))))
+    << (bi::Result << (bi::Name ^ "result")
+                   << (bi::Description ^
+                       "rendered template with template variables injected")
+                   << (bi::Type << bi::String));
+
   Node reverse(const Nodes& args)
   {
     Node x = unwrap_arg(args, UnwrapOpt(0).type(JSONString).func("reverse"));
@@ -1371,6 +1387,10 @@ namespace rego
         BuiltInDef::create(Location("strings.count"), count_decl, count),
         BuiltInDef::create(
           Location("strings.replace_n"), replace_n_decl, replace_n),
+        BuiltInDef::placeholder(
+          Location("strings.render_template"),
+          render_template_decl,
+          "Templates are not supported"),
         BuiltInDef::create(Location("strings.reverse"), reverse_decl, reverse),
         BuiltInDef::create(Location("substring"), substring_decl, substring),
         BuiltInDef::create(Location("trim"), trim_decl, trim),

@@ -622,6 +622,22 @@ namespace
                    << (bi::Description ^
                        "true of `value` matches the `template`")
                    << (bi::Type << bi::Boolean));
+
+  Node globs_match_decl = bi::Decl
+    << (bi::ArgSeq << (bi::Arg << (bi::Name ^ "glob1")
+                               << (bi::Description ^
+                                   "first glob-style regular expression")
+                               << (bi::Type << bi::String))
+                   << (bi::Arg << (bi::Name ^ "glob2")
+                               << (bi::Description ^
+                                   "second glob-style regular expression")
+                               << (bi::Type << bi::String)))
+    << (bi::Result << (bi::Name ^ "result")
+                   << (bi::Description ^
+                       "`true` if the intersection of `glob1` and `glob2` "
+                       "matches a non-empty set of non-empty strings.")
+                   << (bi::Type << bi::Boolean));
+
 }
 
 namespace rego
@@ -644,6 +660,8 @@ namespace rego
           Location("regex.template_match"),
           template_match_decl,
           template_match),
+        BuiltInDef::placeholder(
+          {"regex.globs_match"}, globs_match_decl, "glob not supported"),
       };
     }
   }

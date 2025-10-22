@@ -41,6 +41,7 @@ builtins/net.cc
 builtins/numbers.cc
 builtins/objects.cc
 builtins/regex.cc
+builtins/rego.cc
 builtins/sets.cc
 builtins/semver.cc
 builtins/strings.cc

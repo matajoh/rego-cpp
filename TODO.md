@@ -7,8 +7,9 @@
     - [x] net
     - [x] aws
     - [x] io.jwt
-- [ ] Modify test harness to skip tests whose builtins are not available
-- [ ] Modify tests to run the entire OPA directory (with the skipping)
+- [x] Modify test harness to skip tests whose builtins are not available
+- [x] Modify tests to run the entire OPA directory (with the skipping)
+    - Mention fixing the binary format (all builtins were being omitted from bundles)
 - [ ] Add Output
 - [ ] VM timeout
 - [ ] Builtin whitelist/blacklist

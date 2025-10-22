@@ -50,123 +50,19 @@ add_custom_command(TARGET rego_test POST_BUILD
                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/cheriot $<TARGET_FILE_DIR:rego_test>/cheriot)
 
 if(REGOCPP_OPA_TESTS)
-  set( OPA_TEST_DIRS
-  aggregates
-  arithmetic
-  array
-  assignments
-  base64builtins
-  base64urlbuiltins
-  baseandvirtualdocs
-  bitsand
-  bitsnegate
-  bitsor
-  bitsshiftleft
-  bitsshiftright
-  bitsxor
-  casts
-  comparisonexpr
-  completedoc
-  compositebasedereference
-  compositereferences
-  comprehensions
-  containskeyword
-  dataderef
-  defaultkeyword
-  disjunction
-  elsekeyword
-  embeddedvirtualdoc
-  eqexpr
-  evaltermexpr
-  every
-  example
-  fix1863
-  functionerrors
-  functions
-  helloworld
-  hexbuiltins
-  indexing
-  indirectreferences
-  inputvalues
-  intersection
-  jsonbuiltins
-  jsonfilter
-  jsonfilteridempotent
-  jsonpatch
-  jsonremove
-  jsonremoveidempotent
-  jsonschema
-  keywordrefs
-  negation
-  nestedreferences
-  numbersrange
-  numbersrangestep
-  objectfilter
-  objectfilteridempotent
-  objectfilternonstringkey
-  objectget
-  objectkeys
-  objectremove
-  objectremoveidempotent
-  objectremovenonstringkey
-  objectunion
-  objectunionn
-  partialdocconstants
-  partialiter
-  partialobjectdoc
-  partialsetdoc
-  planner-ir
-  rand
-  reachable
-  refheads
-  regexfind
-  regexfindallstringsubmatch
-  regexisvalid
-  regexmatch
-  regexreplace
-  regexsplit
-  regexmatchtemplate
-  replacen
-  semvercompare
-  semverisvalid
-  sets
-  sprintf
-  strings
-  subset
-  time
-  topdowndynamicdispatch
-  trim
-  trimleft
-  trimprefix
-  trimright
-  trimspace
-  trimsuffix
-  type
-  typebuiltin
-  typenamebuiltin
-  undos
-  union
-  units
-  urlbuiltins
-  uuid
-  varreferences
-  virtualdocs
-  walkbuiltin
-  withkeyword
-  )
-
-  set( OPA_TEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/../opa/v1/test/cases/testdata )
-  foreach( TEST_DIR ${OPA_TEST_DIRS})
-    add_test(NAME rego_test_${TEST_DIR}
-             COMMAND rego_test -wf ${OPA_TEST_ROOT}/v1/${TEST_DIR}/
-             WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
-    if(REGOCPP_OPA_ROUNDTRIP_TESTS)
-      add_test(NAME rego_test_${TEST_DIR}_bundle_json
-              COMMAND rego_test -wf -r json ${OPA_TEST_ROOT}/v1/${TEST_DIR}/
-              WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
-      add_test(NAME rego_test_${TEST_DIR}_bundle_binary
-              COMMAND rego_test -wf -r binary ${OPA_TEST_ROOT}/v1/${TEST_DIR}/
-              WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
-    endif()
-  endforeach()
+  set( OPA_TEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/../opa/v1/test/cases/testdata/v1 )
+  add_test(NAME rego_test_opa
+            COMMAND rego_test -wf ${OPA_TEST_ROOT}
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
+  set_property(TEST rego_test_opa PROPERTY TIMEOUT 300)
+  if(REGOCPP_OPA_ROUNDTRIP_TESTS)
+    add_test(NAME rego_test_opa_bundle_json
+            COMMAND rego_test -wf -r json ${OPA_TEST_ROOT}
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
+    set_property(TEST rego_test_opa_bundle_json PROPERTY TIMEOUT 300)
+    add_test(NAME rego_test_opa_bundle_binary
+            COMMAND rego_test -wf -r binary ${OPA_TEST_ROOT}
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:rego_test>)
+     set_property(TEST rego_test_opa_bundle_binary PROPERTY TIMEOUT 300)
+  endif()
 endif()

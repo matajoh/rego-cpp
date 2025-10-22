@@ -25,6 +25,7 @@ namespace rego
     std::vector<BuiltIn> numbers();
     std::vector<BuiltIn> objects();
     std::vector<BuiltIn> regex();
+    std::vector<BuiltIn> rego();
     std::vector<BuiltIn> semver();
     std::vector<BuiltIn> sets();
     std::vector<BuiltIn> strings();

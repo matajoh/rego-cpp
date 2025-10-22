@@ -2,9 +2,9 @@
 #include "trieste/logging.h"
 
 #include <CLI/CLI.hpp>
-#include <type_traits>
 
 const std::string Green = "\x1b[32m";
+const std::string Cyan = "\x1b[36m";
 const std::string Reset = "\x1b[0m";
 const std::string Red = "\x1b[31m";
 const std::string White = "\x1b[37m";
@@ -38,12 +38,12 @@ void load_testcase_dir(
   {
     if (std::filesystem::is_directory(file_or_dir))
     {
-      logging::Output() << file_or_dir.path();
+      std::cout << std::endl << file_or_dir.path();
       load_testcase_dir(file_or_dir, debug_path, testcases);
     }
     else if (std::filesystem::exists(file_or_dir))
     {
-      logging::Output() << ".";
+      std::cout << ".";
       load_testcases(file_or_dir, debug_path, testcases);
     }
     else
@@ -188,6 +188,7 @@ int main(int argc, char** argv)
 
   int total = 0;
   int failures = 0;
+  int skipped = 0;
 
   if (note_match == "manual")
   {
@@ -226,26 +227,39 @@ int main(int argc, char** argv)
         auto end = std::chrono::steady_clock::now();
         const std::chrono::duration<double> elapsed = end - start;
 
-        if (result.passed)
+        switch (result.outcome)
         {
-          logging::Output()
-            << Green << "  PASS: " << Reset << note << std::fixed
-            << std::setw(62 - note.length()) << std::internal
-            << std::setprecision(3) << elapsed.count() << " sec";
-        }
-        else
-        {
-          failures++;
-          logging::Error() << Red << "  FAIL: " << Reset << note << std::fixed
-                           << std::setw(62 - note.length()) << std::internal
-                           << std::setprecision(3) << elapsed.count() << " sec"
-                           << std::endl
-                           << "  " << result.error << std::endl
-                           << "(from " << testcase.filename() << ")";
-          if (fail_first)
-          {
+          case rego_test::Outcome::Pass:
+            logging::Output()
+              << Green << "  PASS: " << Reset << note << std::fixed
+              << std::setw(62 - note.length()) << std::internal
+              << std::setprecision(3) << elapsed.count() << " sec";
             break;
-          }
+
+          case rego_test::Outcome::Skip:
+            skipped++;
+            total--;
+            logging::Output()
+              << Cyan << "  SKIP: " << Reset << note << " (" << result.error
+              << ")" << std::fixed << std::setw(62 - note.length())
+              << std::internal << std::setprecision(3) << elapsed.count()
+              << " sec";
+            break;
+
+          case rego_test::Outcome::Fail:
+            failures++;
+            logging::Error()
+              << Red << "  FAIL: " << Reset << note << std::fixed
+              << std::setw(62 - note.length()) << std::internal
+              << std::setprecision(3) << elapsed.count() << " sec" << std::endl
+              << "  " << result.error << std::endl
+              << "(from " << testcase.filename() << ")";
+            break;
+        }
+
+        if(result.outcome == rego_test::Outcome::Fail && fail_first)
+        {
+          break;
         }
       }
       catch (const std::exception& e)
@@ -268,13 +282,18 @@ int main(int argc, char** argv)
     if (failures != 0)
     {
       logging::Error() << std::endl
-                       << (total - failures) << " / " << total << " passed"
-                       << std::endl;
+                       << (total - failures) << " / " << total
+                       << " passed";
     }
     else
     {
       logging::Output() << std::endl
-                        << total << " / " << total << " passed" << std::endl;
+                        << total << " / " << total << " passed";
+    }
+
+    if (skipped != 0)
+    {
+      logging::Output() << '(' << skipped << " skipped)" << std::endl;
     }
   }
 

@@ -21,7 +21,8 @@ namespace
                                             << (bi::DynamicArray
                                                 << (bi::Type << bi::String))))))
         << (bi::Arg << (bi::Name ^ "match")
-                    << (bi::Description ^ "string to match against `pattern`")))
+                    << (bi::Description ^ "string to match against `pattern`")
+                    << (bi::Type << bi::String)))
     << (bi::Result << (bi::Name ^ "result")
                    << (bi::Description ^
                        "true if `match` can be found in `pattern` which is "
