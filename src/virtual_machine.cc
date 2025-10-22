@@ -21,18 +21,6 @@ namespace
     return os;
   }
 
-  struct DebugKey
-  {
-    DebugKey(Node n) : n(n) {}
-
-    Node n;
-  };
-
-  std::ostream& operator<<(std::ostream& os, const DebugKey& node)
-  {
-    return os << rego::to_key(node.n);
-  }
-
   struct BlockIndent
   {};
 
@@ -55,6 +43,11 @@ namespace
 namespace rego
 {
   namespace b = bundle;
+
+  std::ostream& operator<<(std::ostream& os, const DebugKey& node)
+  {
+    return os << rego::to_key(node.n);
+  }
 
   VirtualMachine::VirtualMachine() : m_int_regex(R"(-?(?:0|[1-9][0-9]*))") {}
 
@@ -305,7 +298,8 @@ namespace rego
     throw std::runtime_error("Invalid operand");
   }
 
-  VirtualMachine::State::State(Node input, Node data, size_t num_locals)
+  VirtualMachine::State::State(Node input, Node data, size_t num_locals) :
+    m_with_count(0), m_break_count(0)
   {
     m_frame.resize(num_locals, nullptr);
     write_local(0, input->front());

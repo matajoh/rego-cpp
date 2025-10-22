@@ -337,6 +337,7 @@ namespace rego
     register_builtins(builtins::bits());
     register_builtins(builtins::comparison());
     register_builtins(builtins::conversions());
+    register_builtins(builtins::crypto());
     register_builtins(builtins::encoding());
     register_builtins(builtins::graph());
     register_builtins(builtins::internal());

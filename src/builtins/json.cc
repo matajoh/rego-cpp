@@ -1,7 +1,4 @@
 #include "builtins.h"
-#include "rego.hh"
-
-#include <iterator>
 
 namespace
 {
@@ -51,13 +48,22 @@ namespace
       static std::optional<Location> next_key(const Location& path, size_t& pos)
       {
         const std::string_view& path_view = path.view();
+
         if (path_view[pos] != '/')
         {
-          return std::nullopt;
+          if (pos > 0)
+          {
+            // OPA allows paths without an initial preceding slash
+            return std::nullopt;
+          }
+        }
+        else
+        {
+          pos += 1; // remove the prepending `/`
         }
 
+        size_t end = pos;
         bool needs_replacement = false;
-        size_t end = pos + 1;
         while (end < path.len)
         {
           if (path_view[end] == '/')
@@ -73,7 +79,6 @@ namespace
           end += 1;
         }
 
-        pos += 1; // remove the prepending `/`
         Location key(path.source, path.pos + pos, end - pos);
         pos = end;
         if (!needs_replacement)
@@ -221,21 +226,23 @@ namespace
         {
           const Location& key = m_pointer[i];
 
-          if (!current->in({Array, Object, Set}))
+          auto maybe_indexable = unwrap(current, {Array, Object, Set});
+
+          if (!maybe_indexable.success)
           {
             return err(current, "Cannot index into value");
           }
 
+          current = maybe_indexable.node;
+
           if (current == Object)
           {
-            Nodes results = Resolver::object_lookdown(current, key.view());
-            if (results.empty())
+            current = object_index(current, key);
+            if (current == Error)
             {
-              return err(
-                current, "No child at path: " + std::string(key.view()));
+              return current;
             }
 
-            current = results.front() / Val;
             continue;
           }
 
@@ -259,11 +266,14 @@ namespace
           }
         }
 
-        if (!current->in({Object, Array, Set}))
+        auto maybe_indexable = unwrap(current, {Object, Array, Set});
+
+        if (!maybe_indexable.success)
         {
           return err(current, "Cannot index into value");
         }
 
+        current = maybe_indexable.node;
         const Location& key = m_pointer.back();
         if (current == Object)
         {
@@ -305,23 +315,21 @@ namespace
         logging::Trace() << "Pointer: Object action " << DebugAction{m_action}
                          << " on object " << object << " at key " << key.view();
 
-        Node existing;
         Node member;
-        Nodes results = Resolver::object_lookdown(object, key.view());
-        if (results.empty())
+        Node existing = object_index(object, key);
+        if (existing == Error)
         {
           existing = nullptr;
         }
         else
         {
-          member = results.front();
-          existing = member / Val;
+          member = existing->parent();
         }
 
         switch (m_action)
         {
           case Action::Compare:
-            if (results.empty())
+            if (existing == nullptr)
             {
               return err(
                 object,
@@ -361,7 +369,7 @@ namespace
             return existing;
 
           case Action::Replace:
-            if (results.empty())
+            if (existing == nullptr)
             {
               return err(
                 object,
@@ -431,6 +439,12 @@ namespace
           existing = nullptr;
         }
 
+        Location value_key;
+        if (m_value != nullptr)
+        {
+          value_key = Location(strip_quotes(to_key(m_value)));
+        }
+
         switch (m_action)
         {
           case Action::Compare:
@@ -445,6 +459,11 @@ namespace
           case Action::Insert:
             if (existing == nullptr)
             {
+              if (key != value_key)
+              {
+                return err(m_value, "Value does not match specified path");
+              }
+
               set << m_value;
               return m_value;
             }
@@ -480,13 +499,9 @@ namespace
                 "Member does not exist with key: " + std::string(key.view()));
             }
 
-            if (set_lookup.contains(to_key(m_value)))
+            if (key != value_key)
             {
-              set->replace(existing);
-            }
-            else
-            {
-              set->replace(existing, m_value);
+              return err(m_value, "Value does not match specified path");
             }
 
             return existing;
@@ -495,13 +510,35 @@ namespace
         throw std::runtime_error("Unsupported Action value");
       }
 
+      static Node object_index(const Node& object, const Location& key)
+      {
+        for (auto& object_item : *object)
+        {
+          assert(object_item == ObjectItem);
+          auto maybe_string = unwrap(object_item / Key, JSONString);
+          if (!maybe_string.success)
+          {
+            continue;
+          }
+
+          if (maybe_string.node->location() == key)
+          {
+            return object_item / Val;
+          }
+        }
+
+        std::ostringstream error;
+        error << "No child with key `" << key.view() << "` exists in object";
+        return err(object, error.str());
+      }
+
       static Node set_index(
         Node set, Location key, std::map<Location, Node>& lookup)
       {
         Node result;
         for (Node element : *set)
         {
-          Location e_key(to_key(element));
+          Location e_key(strip_quotes(to_key(element)));
           lookup[e_key] = element;
           if (e_key == key)
           {
@@ -568,6 +605,295 @@ namespace
       Pointer m_pointer;
       Action m_action;
       Node m_value;
+    };
+
+    Node select(const Node& object, const Location& path)
+    {
+      return pointer::Operation(path, pointer::Action::Read).run(object);
+    }
+
+    std::optional<Location> select_string(
+      const Node& document, const Location& path)
+    {
+      Node node = select(document, path);
+      if (node == Error)
+      {
+        logging::Debug() << node;
+        return std::nullopt;
+      }
+
+      auto maybe_string = unwrap(node, JSONString);
+      if (!maybe_string.success)
+      {
+        return std::nullopt;
+      }
+
+      return maybe_string.node->location();
+    }
+  }
+
+  namespace patch
+  {
+    const Location OpKey{"/op"};
+    const Location PathKey{"/path"};
+    const Location ValueKey{"/value"};
+    const Location FromKey{"/from"};
+    const Location MissingOp{"missing `op`"};
+    const Location InvalidOp{"invalid `op` value"};
+    const Location MissingPath{"missing `path`"};
+    const Location MissingValue{"missing `value`"};
+    const Location MissingFrom{"missing `from`"};
+
+    enum class Type
+    {
+      Error,
+      Test,
+      Add,
+      Remove,
+      Replace,
+      Copy,
+      Move
+    };
+
+    const std::map<Location, Type> TypeLookup{
+      {{"test"}, Type::Test},
+      {{"add"}, Type::Add},
+      {{"remove"}, Type::Remove},
+      {{"replace"}, Type::Replace},
+      {{"copy"}, Type::Copy},
+      {{"move"}, Type::Move}};
+
+    class Op
+    {
+    public:
+      static Op from_node(Node node)
+      {
+        auto maybe_type = pointer::select_string(node, OpKey);
+        if (!maybe_type.has_value())
+        {
+          return Op(node, Type::Error, MissingOp);
+        }
+
+        auto it = TypeLookup.find(maybe_type.value());
+        if (it == TypeLookup.end())
+        {
+          return Op(node, Type::Error, InvalidOp);
+        }
+
+        Type type = it->second;
+
+        Node path_node = pointer::select(node, PathKey);
+        if (path_node == Error)
+        {
+          return Op(node, Type::Error, MissingPath);
+        }
+
+        auto maybe_string = unwrap(path_node, JSONString);
+
+        Location path;
+        if (maybe_string.success)
+        {
+          path = maybe_string.node->location();
+        }
+        else
+        {
+          auto maybe_array = unwrap(path_node, Array);
+          if (maybe_array.success)
+          {
+            std::ostringstream os;
+            for (Node term : *maybe_array.node)
+            {
+              os << '/' << strip_quotes(to_key(term));
+            }
+
+            path = Location(os.str());
+          }
+          else
+          {
+            return Op(node, Type::Error, MissingPath);
+          }
+        }
+
+        switch (type)
+        {
+          case Type::Remove:
+            return Op(node, Type::Remove, path);
+
+          case Type::Add:
+          case Type::Replace:
+          case Type::Test: {
+            Node value = pointer::select(node, ValueKey);
+            if (value == Error)
+            {
+              return Op(node, Type::Error, MissingValue);
+            }
+
+            return Op(node, type, path, value);
+          }
+
+          case Type::Copy:
+          case Type::Move: {
+            auto maybe_from = pointer::select_string(node, FromKey);
+            if (!maybe_from.has_value())
+            {
+              return Op(node, Type::Error, MissingFrom);
+            }
+
+            return Op(node, type, path, maybe_from.value());
+          }
+
+          default:
+            return {node, Type::Error, {"Unknown error"}};
+        }
+      }
+
+      bool operator<(const Op& other) const
+      {
+        return m_type < other.m_type;
+      }
+
+      Node apply(const Node& document) const
+      {
+        logging::Trace() << "Applying patch " << DebugKey{m_node};
+        switch (m_type)
+        {
+          case Type::Test:
+            return test(document);
+
+          case Type::Add:
+            return add(document);
+
+          case Type::Remove:
+            return remove(document);
+
+          case Type::Replace:
+            return replace(document);
+
+          case Type::Move:
+            return move(document);
+
+          case Type::Copy:
+            return copy(document);
+
+          default:
+            return err(m_node, "Unsupported operation");
+        }
+      }
+
+      Type type() const
+      {
+        return m_type;
+      }
+
+      Node node() const
+      {
+        return m_node;
+      }
+
+      Location path() const
+      {
+        return m_path;
+      }
+
+    private:
+      Op(Node node, Type type, Location path) :
+        m_node(node), m_type(type), m_path(path)
+      {}
+
+      Op(Node node, Type type, Location path, Node value) :
+        m_node(node), m_type(type), m_path(path), m_value(value)
+      {}
+
+      Op(Node node, Type type, Location path, Location from) :
+        m_node(node), m_type(type), m_path(path), m_from(from)
+      {}
+
+      Node test(Node document) const
+      {
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Compare, m_value)
+            .run(document);
+        return result == Error ? result : document;
+      }
+
+      Node add(Node document) const
+      {
+        if (m_path.len == 0)
+        {
+          return m_value->clone();
+        }
+
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Insert, m_value)
+            .run(document);
+        return result == Error ? result : document;
+      }
+
+      Node remove(Node document) const
+      {
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Remove).run(document);
+        return result == Error ? result : document;
+      }
+
+      Node replace(Node document) const
+      {
+        if (m_path.len == 0)
+        {
+          return m_value->clone();
+        }
+
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Replace, m_value)
+            .run(document);
+        return result == Error ? result : document;
+      }
+
+      Node move(Node document) const
+      {
+        if (m_path == m_from)
+        {
+          return document;
+        }
+
+        Node existing =
+          pointer::Operation(m_from, pointer::Action::Remove).run(document);
+        if (existing == Error)
+        {
+          return existing;
+        }
+
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Insert, existing)
+            .run(document);
+        return result == Error ? result : document;
+      }
+
+      Node copy(Node document) const
+      {
+        if (m_path == m_from)
+        {
+          return document;
+        }
+
+        Node existing =
+          pointer::Operation(m_from, pointer::Action::Read).run(document);
+        if (existing == Error)
+        {
+          return existing;
+        }
+
+        Node result =
+          pointer::Operation(m_path, pointer::Action::Insert, existing)
+            .run(document);
+        return result == Error ? result : document;
+      }
+
+      Node m_node;
+      Type m_type;
+      Location m_path;
+      Node m_value;
+      Location m_from;
     };
   }
 
@@ -1099,6 +1425,62 @@ namespace
                                 "all patch operations in `patches`")
                             << (bi::Type << bi::Any));
 
+  Node patch_(Nodes args)
+  {
+    Node object = args[0];
+
+    Node patch = UnwrapOpt(1).type(Array).func("json.patch").unwrap(args);
+    if (patch == Error)
+    {
+      return patch;
+    }
+
+    if (patch->empty())
+    {
+      return object->clone();
+    }
+
+    std::vector<patch::Op> ops;
+
+    for (const auto& node : *patch)
+    {
+      auto op = patch::Op::from_node(node);
+      if (op.type() == patch::Type::Error)
+      {
+        return err(op.node(), std::string(op.path().view()));
+      }
+
+      if (op.type() == patch::Type::Test)
+      {
+        Node result = op.apply(object);
+        if (result == Error)
+        {
+          return result;
+        }
+
+        continue;
+      }
+
+      ops.push_back(op);
+    }
+
+    Node patched = object->clone();
+
+    for (const patch::Op& op : ops)
+    {
+      patched = op.apply(patched);
+      if (patched == Error)
+      {
+        logging::Debug() << patched;
+        return patched;
+      }
+
+      logging::Trace() << "After: " << DebugKey{patched};
+    }
+
+    return patched;
+  }
+
   Node verify_schema_decl = bi::Decl
     << (bi::ArgSeq
         << (bi::Arg << (bi::Name ^ "schema")
@@ -1130,26 +1512,13 @@ namespace rego
   {
     std::vector<BuiltIn> json()
     {
-      // TODO
-      // the schema implementation
-      // can piggy-back on Trieste json, but the others need to operate on Rego
-      // objects as if they were JSON, which is obviously subtly different.
-      // Patch will basically need to be a functional duplicate but operating
-      // over raw Rego objects instead of JSON (to accommodate the set
-      // behaviour, among other things) Remove can be implemented with Patch
-      // Filter can also be implemented with Pointer primitives (with reads and
-      // adds to a separate document)
-
       return {
         BuiltInDef::create(Location("json.filter"), filter_decl, filter),
         BuiltInDef::placeholder(
           Location("json.match_schema"),
           match_schema_decl,
           "JSON schemas are not supported"),
-        BuiltInDef::placeholder(
-          Location("json.patch"),
-          patch_decl,
-          "JSON builtins not available on this platform"),
+        BuiltInDef::create(Location("json.patch"), patch_decl, patch_),
         BuiltInDef::create(Location("json.remove"), remove_decl, remove_),
         BuiltInDef::placeholder(
           Location("json.verify_schema"),

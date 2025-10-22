@@ -27,6 +27,7 @@ builtins/base64/base64.cpp
 builtins/bits.cc
 builtins/comparison.cc
 builtins/conversions.cc
+builtins/crypto.cc
 builtins/encoding.cc
 builtins/graph.cc
 builtins/internal.cc

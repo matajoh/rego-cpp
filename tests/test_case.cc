@@ -982,11 +982,12 @@ namespace rego_test
       return *this;
     }
 
-    auto maybe_array = unwrap(want_result, Array);
+    auto maybe_array = unwrap(want_result, {Array, Results});
     if (!maybe_array.success)
     {
       throw std::invalid_argument("want_result must be an array");
     }
+
     m_want_result = maybe_array.node;
     return *this;
   }

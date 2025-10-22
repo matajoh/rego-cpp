@@ -161,6 +161,8 @@ int main(int argc, char** argv)
     log_level = rego::log_level_from_string(log_level_str);
   }
 
+  trieste::logging::set_log_level_from_string(log_level_str);
+
   logging::Output() << "Loading test cases:";
   TestCases all_testcases;
   for (auto file_or_dir : case_paths)

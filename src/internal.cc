@@ -444,7 +444,7 @@ namespace rego
           });
         error << "}";
       }
-      else if (m_types.empty())
+      else if (m_types.empty() && m_type.def != nullptr)
       {
         error << "must be " << type_name(m_type, m_specify_number);
       }

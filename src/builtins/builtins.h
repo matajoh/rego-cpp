@@ -11,6 +11,7 @@ namespace rego
     std::vector<BuiltIn> bits();
     std::vector<BuiltIn> comparison();
     std::vector<BuiltIn> conversions();
+    std::vector<BuiltIn> crypto();
     std::vector<BuiltIn> encoding();
     std::vector<BuiltIn> graph();
     std::vector<BuiltIn> internal();
