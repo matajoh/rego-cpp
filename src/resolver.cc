@@ -648,6 +648,16 @@ namespace rego
       if (key_str == query_str)
       {
         terms.push_back((object_item / Val)->clone());
+        continue;
+      }
+
+      auto maybe_string = unwrap(key, JSONString);
+      if (
+        maybe_string.success &&
+        maybe_string.node->location().view() == query_str)
+      {
+        // the query string was provided without quotes
+        terms.push_back((object_item / Val)->clone());
       }
     }
 

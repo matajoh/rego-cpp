@@ -38,7 +38,7 @@ int print_error(regoInterpreter* rego)
     return REGO_ERROR;
   }
 
-  buf = malloc(size);
+  buf = (char *)malloc(size);
   err = regoError(rego, buf, size);
   if (err == REGO_OK)
   {

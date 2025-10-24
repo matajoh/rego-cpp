@@ -1,7 +1,10 @@
+#include "rego/rego.hh"
+#include "rego/rego_c.h"
 #include "test_case.h"
 #include "trieste/logging.h"
 
 #include <CLI/CLI.hpp>
+#include <stdexcept>
 
 const std::string Green = "\x1b[32m";
 const std::string Cyan = "\x1b[36m";
@@ -53,8 +56,13 @@ void load_testcase_dir(
   }
 }
 
-int manual_construction_test()
+int manual_construction_test(const std::string& debug_path, bool wf_checks, rego::LogLevel log_level)
 {
+  rego::Interpreter rego;
+  rego.log_level(log_level).wf_check_enabled(wf_checks);
+  if(!debug_path.empty()){
+    rego.debug_enabled(true).debug_path(debug_path);
+  }
   auto input = rego::object({
     rego::object_item(
       rego::scalar("a"), rego::scalar(rego::BigInt((size_t)10L))),
@@ -65,8 +73,6 @@ int manual_construction_test()
 
   std::string query = "[input.a, input.b, input.c, input.d]";
   std::string expected = R"({"expressions":[[10,"20",30,true]]})";
-
-  rego::Interpreter rego;
 
   auto start = std::chrono::steady_clock::now();
   rego.set_input(input);
@@ -89,6 +95,166 @@ int manual_construction_test()
                    << std::endl
                    << "  Expected: " << expected << std::endl
                    << "  Actual: " << actual << std::endl;
+  return 1;
+}
+
+rego_test::TestResult output_test(rego::Interpreter& rego)
+{
+  rego::Output output = rego.query_output("invalid^@rego");
+  if (output.ok())
+  {
+    return {rego_test::Outcome::Fail, "Expected output to be invalid"};
+  }
+
+  try
+  {
+    output.expressions();
+    return {rego_test::Outcome::Fail, "Expected logic_error"};
+  }
+  catch (const std::logic_error&)
+  {}
+
+  try
+  {
+    output.binding("x");
+    return {rego_test::Outcome::Fail, "Expected logic_error"};
+  }
+  catch (const std::logic_error&)
+  {}
+
+  output = rego.query_output("a = [1, 2, 3, 4]; x = a[_]; x % 2 == 0; x / 2");
+  std::ostringstream error;
+  if (output.size() != 2)
+  {
+    error << "Output is not the correct size: " << output.size() << " != " << 2;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  try
+  {
+    output.expressions_at(2);
+    return {rego_test::Outcome::Fail, "expected an out_of_range error"};
+  }
+  catch (const std::out_of_range&)
+  {}
+
+  rego::Node expressions0 = output.expressions();
+  if (expressions0->size() != 4)
+  {
+    error << "Expressions@0 is the wrong size: " << expressions0->size()
+          << " != " << 4;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  rego::Node expressions1 = output.expressions_at(1);
+  if (expressions1->size() != 4)
+  {
+    error << "Expressions@1 is the wrong size: " << expressions0->size()
+          << " != " << 4;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  rego::Node last0 = expressions0->back();
+  std::string actual = rego::to_key(last0);
+  std::string expected = "1";
+  if (actual != expected)
+  {
+    error << "Expressions@0[3]: " << actual << " != " << expected;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  rego::Node last1 = expressions1->back();
+  actual = rego::to_key(last1);
+  expected = "2";
+  if (actual != expected)
+  {
+    error << "Expressions@1[3]: " << actual << " != " << expected;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  try
+  {
+    output.binding_at(2, "a");
+    return {rego_test::Outcome::Fail, "expected an out_of_range error"};
+  }
+  catch (const std::out_of_range&)
+  {}
+
+  try
+  {
+    output.binding("b");
+    return {rego_test::Outcome::Fail, "expected an invalid_argument error"};
+  }
+  catch (const std::invalid_argument&)
+  {}
+
+  rego::Node a = output.binding("a");
+  actual = rego::to_key(a);
+  expected = "[1,2,3,4]";
+  if (actual != expected)
+  {
+    error << "a@0: " << actual << " != " << expected;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  rego::Node x_node = output.binding("x");
+  auto maybe_int = rego::try_get_int(x_node);
+  if (!maybe_int.has_value())
+  {
+    error << "x@0 is not an integer: " << x_node;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  if (maybe_int.value().to_int() != 2)
+  {
+    error << "x@0: " << maybe_int.value() << " != " << 2;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  x_node = output.binding_at(1, "x");
+  maybe_int = rego::try_get_int(x_node);
+  if (!maybe_int.has_value())
+  {
+    error << "x@1 is not an integer: " << x_node;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  if (maybe_int.value().to_int() != 4)
+  {
+    error << "x@1: " << maybe_int.value() << " != " << 4;
+    return {rego_test::Outcome::Fail, error.str()};
+  }
+
+  return {rego_test::Outcome::Pass, ""};
+}
+
+int manual_output_test(const std::string& debug_path, bool wf_checks, rego::LogLevel log_level)
+{
+  rego::Interpreter rego;
+  rego.log_level(log_level).wf_check_enabled(wf_checks);
+  if(!debug_path.empty()){
+    rego.debug_enabled(true).debug_path(debug_path);
+  }
+
+  auto start = std::chrono::steady_clock::now();
+  auto result = output_test(rego);
+  auto end = std::chrono::steady_clock::now();
+  const std::chrono::duration<double> elapsed = end - start;
+  std::string note = "manual output test";
+
+  if (result.outcome == rego_test::Outcome::Pass)
+  {
+    logging::Output() << Green << "  PASS: " << Reset << note << std::fixed
+                      << std::setw(62 - note.length()) << std::internal
+                      << std::setprecision(3) << elapsed.count() << " sec";
+    return 0;
+  }
+
+  logging::Error() << Red << "  FAIL: " << Reset << note << std::fixed
+                   << std::setw(62 - note.length()) << std::internal
+                   << std::setprecision(3) << elapsed.count() << " sec"
+                   << std::endl
+                   << "  Error: " << result.error;
   return 1;
 }
 
@@ -192,8 +358,13 @@ int main(int argc, char** argv)
 
   if (note_match == "manual")
   {
-    total++;
-    if (manual_construction_test() != 0)
+    total += 2;
+    if (manual_construction_test(debug_path, wf_checks, log_level) != 0)
+    {
+      failures++;
+    }
+
+    if (manual_output_test(debug_path, wf_checks, log_level) != 0)
     {
       failures++;
     }
@@ -257,7 +428,7 @@ int main(int argc, char** argv)
             break;
         }
 
-        if(result.outcome == rego_test::Outcome::Fail && fail_first)
+        if (result.outcome == rego_test::Outcome::Fail && fail_first)
         {
           break;
         }
@@ -282,13 +453,11 @@ int main(int argc, char** argv)
     if (failures != 0)
     {
       logging::Error() << std::endl
-                       << (total - failures) << " / " << total
-                       << " passed";
+                       << (total - failures) << " / " << total << " passed";
     }
     else
     {
-      logging::Output() << std::endl
-                        << total << " / " << total << " passed";
+      logging::Output() << std::endl << total << " / " << total << " passed";
     }
 
     if (skipped != 0)

@@ -10,7 +10,11 @@
 - [x] Modify test harness to skip tests whose builtins are not available
 - [x] Modify tests to run the entire OPA directory (with the skipping)
     - Mention fixing the binary format (all builtins were being omitted from bundles)
-- [ ] Add Output
+- [x] Add Output
+    - API change (get_string/get_raw_string)
 - [ ] VM timeout
 - [ ] Builtin whitelist/blacklist
 - [ ] Selective builtin loading
+- [ ] Release
+    - [ ] bump version
+    - [ ] Release notes

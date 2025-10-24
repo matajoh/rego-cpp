@@ -673,7 +673,7 @@ namespace
           break;
 
         case PrintVerbType::String:
-          result << get_string(node);
+          result << get_raw_string(node);
           break;
 
         case PrintVerbType::Literal:

@@ -1288,7 +1288,7 @@ namespace rego
         if (existing_key != new_key)
         {
           logging::Error()
-            << "key already exists but values do not match: existing="
+            << "key " << insert_key << " already exists but values do not match: existing="
             << existing_key << " != new=" << new_key;
           return true;
         }

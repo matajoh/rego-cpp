@@ -4213,6 +4213,14 @@ namespace
               return err(scansource_ref, "Invalid scan source");
             }
 
+            Node scansource_block = _(OpBlock) / Block;
+            if (scansource_block->empty())
+            {
+              return Literal
+                << (ScanStmt << scansource_ref->clone() << _(Key) << _(Val)
+                             << _(Block));
+            }
+
             return Seq << (Literal << _(OpBlock))
                        << (Literal
                            << (ScanStmt << scansource_ref->clone() << _(Key)
@@ -4772,6 +4780,9 @@ namespace
 
             Node body_block = Block
               << (MakeArrayStmt << (Int32 ^ "1") << (LocalRef ^ result_name));
+
+            logging::Debug() << _(Query);
+
             for (Node literal : *_(Query))
             {
               add_literal_to_block(body_block, literal);
@@ -4781,6 +4792,7 @@ namespace
               }
 
               Node expr = literal / Expr;
+              logging::Debug() << expr;
               Location text = literal->location();
               text.len += 1;
               if (expr == OpBlock)

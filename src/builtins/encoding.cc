@@ -305,16 +305,23 @@ namespace
       std::string key = get_string(maybe_key.node);
       if (key == "pretty")
       {
-        auto maybe_bool = unwrap(item / Val, {True, False});
-        if (!maybe_bool.success)
+        auto maybe_bool = try_get_bool(item / Val);
+        if (!maybe_bool.has_value())
         {
           return err(item, "value must be a boolean", EvalBuiltInError);
         }
-        maybe_pretty = get_bool(maybe_bool.node);
+
+        maybe_pretty = maybe_bool.value();
       }
       else if (key == "indent")
       {
-        indent = get_string(item / Val);
+        auto maybe_indent = try_get_string(item / Val);
+        if (!maybe_indent.has_value())
+        {
+          return err(item, "value must be a string", EvalBuiltInError);
+        }
+
+        indent = maybe_indent.value();
         if (!maybe_pretty.has_value())
         {
           maybe_pretty = true;
@@ -322,7 +329,13 @@ namespace
       }
       else if (key == "prefix")
       {
-        prefix = get_string(item / Val);
+        auto maybe_prefix = try_get_string(item / Val);
+        if (!maybe_prefix.has_value())
+        {
+          return err(item, "value must be a string", EvalBuiltInError);
+        }
+
+        prefix = maybe_prefix.value();
         if (!maybe_pretty.has_value())
         {
           maybe_pretty = true;

@@ -21,6 +21,7 @@ bundle_json.cc
 opblock.cc
 dependency_graph.cc
 internal.cc
+output.cc
 builtins/aggregates.cc
 builtins/arrays.cc
 builtins/aws.cc

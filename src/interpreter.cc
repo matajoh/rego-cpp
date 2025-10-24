@@ -738,4 +738,14 @@ namespace rego
     m_c_error = error;
     return *this;
   }
+
+  Output Interpreter::query_output(const std::string& query_expr)
+  {
+    return Output(query_node(query_expr));
+  }
+
+  Output Interpreter::query_output()
+  {
+    return Output(query_node());
+  }
 }
