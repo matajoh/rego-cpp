@@ -748,4 +748,15 @@ namespace rego
   {
     return Output(query_node());
   }
+
+  size_t Interpreter::stmt_limit() const
+  {
+    return m_vm.stmt_limit();
+  }
+
+  Interpreter& Interpreter::stmt_limit(size_t stmt_limit)
+  {
+    m_vm.stmt_limit(stmt_limit);
+    return *this;
+  }
 }

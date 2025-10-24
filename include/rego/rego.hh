@@ -937,6 +937,7 @@ namespace rego
   const std::string WellFormedError = "wellformed_error";
   const std::string RuntimeError = "runtime_error";
   const std::string RecursionError = "rego_recursion_error";
+  const std::string TimeoutError = "timeout_error";
   const std::string DefaultVersion = "v1";
   /// @endcond
 
@@ -1369,6 +1370,14 @@ namespace rego
     /// @brief Gets the bundle used during execution.
     Bundle bundle() const;
 
+    /// @brief Gets the maximum number of statements that will execute before a timeout.
+    size_t stmt_limit() const;
+
+    /// @brief Sets the maximum number of statements that will execute before a timeout.
+    /// @param stmt_limit The statement limit
+    /// @return A reference to this virtual machine
+    VirtualMachine& stmt_limit(size_t stmt_limit);
+
   private:
     typedef std::vector<Node> Frame;
 
@@ -1379,6 +1388,7 @@ namespace rego
       Undefined,
       MultipleOutputs,
       Return,
+      Timeout,
       Error
     };
 
@@ -1408,6 +1418,8 @@ namespace rego
       bool in_break() const;
       void push_break(size_t levels);
       void pop_break();
+      size_t stmt_count() const;
+      size_t inc_stmts();
 
     private:
       Frame m_frame;
@@ -1419,6 +1431,7 @@ namespace rego
       Nodes m_result_set;
       size_t m_with_count;
       size_t m_break_count;
+      size_t m_stmt_count;
     };
 
     void run_plan(const bundle::Plan& plan, State& state) const;
@@ -1449,6 +1462,7 @@ namespace rego
     Bundle m_bundle;
     BuiltIns m_builtins;
     RE2 m_int_regex;
+    size_t m_stmt_limit;
   };
 
   /// @brief Encapsulates the output of a Rego query.
@@ -1472,6 +1486,8 @@ namespace rego
     std::string m_json;
 
     public:
+    /// @brief Constructor.
+    /// @param node A Results or ErrorSeq node.
     Output(Node node);
 
     bool ok() const;
@@ -1807,6 +1823,14 @@ namespace rego
     /// @param error the error message
     /// @return A reference to the interpreter.
     Interpreter& c_error(const std::string& error);
+
+    /// @brief Gets the maximum number of statements that will execute before a timeout.
+    size_t stmt_limit() const;
+
+    /// @brief Sets the maximum number of statements that will execute before a timeout.
+    /// @param stmt_limit The statement limit
+    /// @return A reference to this Interpreter
+    Interpreter& stmt_limit(size_t stmt_limit);
 
   private:
     Reader& reader();
