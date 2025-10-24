@@ -12,8 +12,13 @@
     - Mention fixing the binary format (all builtins were being omitted from bundles)
 - [x] Add Output
     - API change (get_string/get_raw_string)
-- [ ] VM timeout
+- [x] VM timeout
 - [ ] Builtin whitelist/blacklist
+    - Do this with builtin factories. The builtin loaders can now (optionally) register
+      factories instead of full builtins. 
+    - Try replacing the Decl nodes with function pointers. It will be a bit of a
+      heavy refactor, but the result will be that the nodes get generated lazily.
+      Do a timing test with one of the larger sets to see if it has an impact.
 - [ ] Selective builtin loading
 - [ ] Release
     - [ ] bump version

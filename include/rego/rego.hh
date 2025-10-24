@@ -826,6 +826,8 @@ namespace rego
       const Location& name, Node decl, const std::string& message);
   };
 
+  typedef std::function<BuiltIn()> BuiltInFactory;
+
   /// @brief Manages the set of builtins used by an interpreter to resolve
   /// built-in calls.
   class BuiltInsDef
@@ -868,6 +870,8 @@ namespace rego
     /// @return A reference to this instance.
     BuiltInsDef& register_builtin(const BuiltIn& built_in);
 
+    BuiltInsDef& register_factory(const char* name, BuiltInFactory factory);
+
     /// @brief Gets the built-in with the provided name.
     /// @param name The name of the built-in to retrieve.
     /// @return The built-in with the specified name.
@@ -899,6 +903,17 @@ namespace rego
       return *this;
     }
 
+    template<typename T>
+    BuiltInsDef& register_factories(const T& factories)
+    {
+      for(auto& [name, factory] : factories)
+      {
+        register_factory(name, factory);
+      }
+
+      return *this;
+    }
+
     /// @brief This registers the "standard library" of built-ins.
     /// @details
     /// There are a number of built-ins which are provided by default. These
@@ -906,6 +921,10 @@ namespace rego
     /// docs](https://www.openpolicyagent.org/docs/policy-reference/builtins/).
     /// @return A reference to this instance.
     BuiltInsDef& register_standard_builtins();
+
+    BuiltInsDef& register_whitelist(const std::vector<std::string>& allowed);
+
+    BuiltInsDef& register_blacklist(const std::vector<std::string>& disallowed);
 
     /// @brief Creates the standard builtin set.
     /// @return A shared pointer to the created BuiltInsDef.
@@ -920,7 +939,12 @@ namespace rego
     std::map<Location, BuiltIn>::const_iterator end() const;
 
   private:
-    std::map<Location, BuiltIn> m_builtins;
+    struct BuiltInInfo {
+      BuiltIn value;
+      BuiltInFactory factory;
+    };
+
+    std::map<Location, BuiltInInfo> m_builtins;
     bool m_strict_errors;
   };
 
